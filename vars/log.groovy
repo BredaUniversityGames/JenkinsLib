@@ -21,5 +21,5 @@ def currStage()
 def file(targetFile)
 {
    def content = readFile(file: targetFile)
-   echo "Content of ${targetFile}:\n\n"
+   echo "Content of ${targetFile}:\n\n${content}"
 }
