@@ -58,11 +58,42 @@ Under the **Pipeline** section at the bottom of the job configuration page:
 
 1. Set **Definition** to `Pipeline script from SCM`
 2. Set **SCM** to `Perforce Software`
-3. Select the **Credential** for your Perforce server
+3. Under **Perforce Credentials**, select the credential for your Perforce server
    (see [Setting Up Perforce with Jenkins](#setting-up-perforce-with-jenkins) below)
-4. Under **Workspace Behaviour**, choose `Manual (custom view)` and enter the depot mapping
-   that includes your `Jenkinsfile`
-5. Leave **Script Path** as `Jenkinsfile`
+4. Set **Workspace behaviour** to `Manual (custom view)`
+5. Configure the workspace fields:
+   - **Character Set**: leave as `none` (unless your depot uses Unicode)
+   - **Workspace name**: enter the name of the Perforce workspace you created in
+     [Step 2](#step-2-create-a-perforce-workspace) (e.g. `jenkins-MyProject`)
+   - **Pin the workspace to the build host**: leave unchecked (unless you want this
+     job to only run on a specific agent)
+   - **Options**: check `CLOBBER` (allows Jenkins to overwrite writable files during sync).
+     Leave the other options at their defaults.
+   - **Line Endings**: leave empty (uses the workspace default)
+   - **Type**: leave empty (uses the workspace default)
+   - **Stream** / **Stream at change**: leave empty (only needed for Perforce stream depots)
+   - **View Mappings**: enter the same depot-to-workspace mapping you configured in
+     [Step 2](#step-2-create-a-perforce-workspace), e.g.
+     `//depot/MyProject/... //jenkins-MyProject/MyProject/...`
+     (Jenkins overwrites the workspace view with this value, so it cannot be left empty)
+   - **Change View**: leave empty
+   - **Server ID**: leave empty
+   - **Backup Client**: leave checked
+6. Under **Populate options**, select `Auto cleanup and sync` and configure:
+   - **REPLACE missing/modified files**: check (re-syncs files that were changed or
+     deleted outside of Perforce)
+   - **DELETE generated files**: check (removes files not tracked by Perforce before
+     syncing, keeping the workspace clean)
+   - **Sync with MODTIME for consistency check**: leave unchecked
+   - **QUIET Perforce messages**: check (reduces console output noise)
+   - **Clean up Review actions**: leave unchecked
+   - **Pin build at Perforce Label**: leave empty
+7. Leave **Parallel sync**, **Polling build filters**, and **Repository browser** at
+   their defaults
+8. Leave **Script Path** as `Jenkinsfile`
+9. **Uncheck** **Lightweight checkout** (when enabled, Jenkins creates a temporary
+   workspace to fetch the Jenkinsfile, which fails because the temporary workspace's
+   view mapping doesn't match your depot layout)
 
 ### Step 4: First Run (Parameter Population)
 
