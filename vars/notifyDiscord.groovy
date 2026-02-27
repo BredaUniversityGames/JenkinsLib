@@ -6,6 +6,73 @@ import groovy.json.JsonSlurper
  * Implements the notification interface: send(buildInfo, webhook) and sendTestReport(reportInfo, webhook).
  */
 
+// ── Module registration ──
+
+def call(Map overrides = [:]) {
+    buasPipeline.registerModule(
+        category: 'notify',
+        name: 'Discord',
+        params: pipelineParams(overrides),
+        ref: this,
+        cleanup: false
+    )
+}
+
+def pipelineParams(Map overrides = [:]) {
+    return [
+        string(name: 'DISCORD_WEBHOOK', defaultValue: overrides.DISCORD_WEBHOOK ?: '',
+               description: 'Discord webhook URL')
+    ]
+}
+
+def executeNotify(String status, Map params, Map ctx) {
+    if (!params.DISCORD_WEBHOOK) return
+
+    // Build the buildInfo map from context (populated by VCS and build modules)
+    def buildInfo = [
+        status:   status,
+        jobName:  env.JOB_BASE_NAME,
+        buildNum: env.BUILD_NUMBER,
+        buildUrl: env.BUILD_URL,
+        config:   ctx.buildConfig ?: '',
+        platform: ctx.buildPlatform ?: '',
+        vcsType:  ctx.vcsType ?: '',
+        revision: ctx.revision ?: 'unknown'
+    ]
+
+    send(buildInfo, params.DISCORD_WEBHOOK)
+
+    // Send test report if test results are available
+    if (ctx.testResults) {
+        def testResults = new groovy.json.JsonSlurper().parseText(ctx.testResults)
+        def reportInfo = [
+            succeeded: testResults.succeeded ?: 0,
+            failed:    testResults.failed ?: 0,
+            warnings:  testResults.succeededWithWarnings ?: 0,
+            total:     (testResults.succeeded ?: 0) + (testResults.failed ?: 0) + (testResults.succeededWithWarnings ?: 0),
+            reportUrl: "${env.BUILD_URL}testReport/",
+            jobName:   env.JOB_BASE_NAME,
+            buildNum:  env.BUILD_NUMBER
+        ]
+        sendTestReport(reportInfo, params.DISCORD_WEBHOOK)
+    }
+
+    // Send review notification if review was created
+    if (ctx.reviewId) {
+        def reviewInfo = [
+            reviewId:    ctx.reviewId,
+            author:      ctx.reviewAuthor ?: '',
+            swarmUrl:    ctx.swarmUrl ?: '',
+            buildStatus: status,
+            jobName:     env.JOB_BASE_NAME,
+            buildNum:    env.BUILD_NUMBER
+        ]
+        sendReviewNotification(reviewInfo, params.DISCORD_WEBHOOK)
+    }
+}
+
+// ── Direct-use methods ──
+
 def send(Map buildInfo, String webhook) {
     def colorMap = [SUCCESS: 65280, UNSTABLE: 16776960, FAILURE: 16711680, ABORTED: 16711680]
     def emojiMap = [SUCCESS: ':white_check_mark:', UNSTABLE: ':warning:', FAILURE: ':x:', ABORTED: ':stop_sign:']

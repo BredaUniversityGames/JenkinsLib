@@ -3,6 +3,61 @@
  * Stateless - all configuration passed via Map parameters.
  */
 
+// ── Module registration ──
+
+def call(Map overrides = [:]) {
+    buasPipeline.registerModule(
+        category: 'vcs',
+        name: 'Source Control',
+        params: pipelineParams(overrides),
+        ref: this,
+        cleanup: true
+    )
+}
+
+def pipelineParams(Map overrides = [:]) {
+    return [
+        string(name: 'P4_CREDENTIAL', defaultValue: overrides.P4_CREDENTIAL ?: '',
+               description: 'Jenkins credentials ID for Perforce'),
+        string(name: 'P4_HOST', defaultValue: overrides.P4_HOST ?: 'ssl:perforce.buas.nl:1666',
+               description: 'Perforce server host'),
+        string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: '',
+               description: 'Perforce workspace template name'),
+        string(name: 'P4_MAPPING', defaultValue: overrides.P4_MAPPING ?: '',
+               description: 'Perforce depot view mapping (for depot source)'),
+        booleanParam(name: 'P4_FORCE_CLEAN', defaultValue: overrides.P4_FORCE_CLEAN ?: false,
+                     description: 'Force clean Perforce sync'),
+        booleanParam(name: 'P4_USE_DEPOT_SOURCE', defaultValue: overrides.P4_USE_DEPOT_SOURCE ?: false,
+                     description: 'Use depot source instead of workspace template')
+    ]
+}
+
+def execute(Map params, Map ctx) {
+    checkout(
+        credential:     params.P4_CREDENTIAL,
+        host:           params.P4_HOST,
+        workspace:      params.P4_WORKSPACE,
+        mapping:        params.P4_MAPPING,
+        forceClean:     params.P4_FORCE_CLEAN,
+        useDepotSource: params.P4_USE_DEPOT_SOURCE
+    )
+    ctx.vcsType = 'Perforce'
+    ctx.revision = env.P4_CHANGELIST ?: 'unknown'
+    ctx.changelist = env.P4_CHANGELIST ?: ''
+}
+
+def executeCleanup(Map params, Map ctx) {
+    if (params.P4_CREDENTIAL) {
+        cleanup(
+            credential: params.P4_CREDENTIAL,
+            workspace:  params.P4_WORKSPACE,
+            mapping:    params.P4_MAPPING
+        )
+    }
+}
+
+// ── Direct-use methods ──
+
 def checkout(Map config) {
     def credential = config.credential
     def host = config.host

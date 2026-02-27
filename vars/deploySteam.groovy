@@ -4,6 +4,47 @@
  * Stateless - all configuration passed via Map parameters.
  */
 
+// ── Module registration ──
+
+def call(Map overrides = [:]) {
+    buasPipeline.registerModule(
+        category: 'deploy',
+        name: 'Steam',
+        params: pipelineParams(overrides),
+        ref: this,
+        cleanup: false
+    )
+}
+
+def pipelineParams(Map overrides = [:]) {
+    return [
+        string(name: 'STEAM_CREDENTIAL', defaultValue: overrides.STEAM_CREDENTIAL ?: '',
+               description: 'Jenkins credential ID for Steam (username/password)'),
+        string(name: 'STEAM_CMD_PATH', defaultValue: overrides.STEAM_CMD_PATH ?: '',
+               description: 'Path to steamcmd.exe'),
+        string(name: 'STEAM_APP_ID', defaultValue: overrides.STEAM_APP_ID ?: '',
+               description: 'Steam App ID'),
+        string(name: 'STEAM_DEPOT_ID', defaultValue: overrides.STEAM_DEPOT_ID ?: '',
+               description: 'Steam Depot ID'),
+        string(name: 'STEAM_BRANCH', defaultValue: overrides.STEAM_BRANCH ?: '',
+               description: 'Steam branch to set live (leave empty for none)')
+    ]
+}
+
+def execute(Map params, Map ctx) {
+    deploy(
+        credential:   params.STEAM_CREDENTIAL,
+        steamCmdPath: params.STEAM_CMD_PATH,
+        appId:        params.STEAM_APP_ID,
+        depotId:      params.STEAM_DEPOT_ID,
+        contentRoot:  ctx.outputDir,
+        platform:     ctx.buildPlatform ?: 'Win64',
+        branch:       params.STEAM_BRANCH
+    )
+}
+
+// ── Direct-use methods ──
+
 def deploy(Map config) {
     def credential = config.credential
     def steamCmdPath = config.steamCmdPath

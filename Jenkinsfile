@@ -1,10 +1,10 @@
 // JenkinsLib - Example Jenkinsfile
 //
-// This is the uber-template entry point. Copy this file to your project
-// repo as 'Jenkinsfile', create a Pipeline job in Jenkins, run once to
-// populate parameters, then configure everything via the Jenkins UI.
+// Compose your pipeline by uncommenting the modules you need.
+// Each module adds its own parameters and stage to Jenkins.
+// Run once to populate parameters, then configure via the Jenkins UI.
 //
-// See README.md for full parameter documentation.
+// See README.md for full documentation.
 
 library identifier: 'JenkinsLib@main',
     retriever: modernSCM([
@@ -12,4 +12,31 @@ library identifier: 'JenkinsLib@main',
       remote: 'https://github.com/BredaUniversityGames/JenkinsLib'
     ])
 
-buasPipeline()
+buasPipeline {
+    // ── Version Control (pick one) ──
+    vcsPerforce()
+    // vcsGit()
+
+    // ── Build Engine (pick one) ──
+    buildUE5()
+    // buildVS()
+
+    // ── Testing (pick one, must match build engine) ──
+    // testUE5()
+    // testVS()
+
+    // ── Code Review ──
+    // reviewSwarm()
+
+    // ── Deployment (enable any combination) ──
+    // deploySteam()
+    // deployItch()
+    // deployGDrive()
+    // deployEpic()
+
+    // ── Debug Symbols ──
+    // symbolsSentry()
+
+    // ── Notifications ──
+    notifyDiscord()
+}

@@ -7,6 +7,76 @@ import groovy.xml.MarkupBuilder
  * Stateless - all configuration passed via Map parameters.
  */
 
+// ── Module registration ──
+
+def call(Map overrides = [:]) {
+    buasPipeline.registerModule(
+        category: 'build',
+        name: 'Build',
+        params: pipelineParams(overrides),
+        ref: this,
+        cleanup: false
+    )
+}
+
+def pipelineParams(Map overrides = [:]) {
+    return [
+        choice(name: 'UE5_BUILD_METHOD',
+               choices: overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'],
+               description: 'UE5 build method'),
+        string(name: 'UE5_ENGINE_ROOT', defaultValue: overrides.UE5_ENGINE_ROOT ?: '',
+               description: 'Path to UE5 engine root (e.g. C:\\UE_5.3)'),
+        string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: '',
+               description: 'Absolute path to .uproject file'),
+        string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: '',
+               description: 'Project name (without extension)'),
+        string(name: 'UE5_CUSTOM_FLAGS',
+               defaultValue: overrides.UE5_CUSTOM_FLAGS ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package',
+               description: 'Custom RunUAT flags (only for Custom build method)'),
+        choice(name: 'BUILD_CONFIG',
+               choices: overrides.BUILD_CONFIG_CHOICES ?: ['Development', 'Shipping', 'DebugGame', 'Debug', 'Test'],
+               description: 'Build configuration'),
+        choice(name: 'BUILD_PLATFORM',
+               choices: overrides.BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'],
+               description: 'Target platform'),
+        booleanParam(name: 'MATCH_BUILD_ID', defaultValue: overrides.MATCH_BUILD_ID ?: false,
+                     description: 'Run MatchBuildID.py before build (for precompiled engines with plugins)')
+    ]
+}
+
+def execute(Map params, Map ctx) {
+    // Pre-build: MatchBuildID if enabled
+    if (params.MATCH_BUILD_ID) {
+        def projectDir = params.UE5_PROJECT_PATH.substring(0,
+            params.UE5_PROJECT_PATH.lastIndexOf('\\'))
+        utilPython.runScript(
+            "${env.WORKSPACE}\\JenkinsLib\\scripts\\MatchBuildID.py",
+            "\"${projectDir}\" \"${params.UE5_ENGINE_ROOT}\" \"false\""
+        )
+    }
+
+    // Build
+    build(
+        engineRoot:  params.UE5_ENGINE_ROOT,
+        projectName: params.UE5_PROJECT_NAME,
+        project:     params.UE5_PROJECT_PATH,
+        config:      params.BUILD_CONFIG,
+        platform:    params.BUILD_PLATFORM,
+        outputDir:   ctx.outputDir,
+        method:      params.UE5_BUILD_METHOD,
+        customFlags: params.UE5_CUSTOM_FLAGS
+    )
+
+    // Populate context for downstream modules
+    ctx.buildConfig = params.BUILD_CONFIG
+    ctx.buildPlatform = params.BUILD_PLATFORM
+    ctx.engineRoot = params.UE5_ENGINE_ROOT
+    ctx.projectPath = params.UE5_PROJECT_PATH
+    ctx.buildEngine = 'UE5'
+}
+
+// ── Direct-use methods ──
+
 def build(Map config) {
     def engineRoot = config.engineRoot
     def projectName = config.projectName

@@ -5,6 +5,47 @@ import groovy.json.JsonSlurper
  * Stateless - all configuration passed via Map parameters.
  */
 
+// ── Module registration ──
+
+def call(Map overrides = [:]) {
+    buasPipeline.registerModule(
+        category: 'review',
+        name: 'Swarm Review',
+        params: pipelineParams(overrides),
+        ref: this,
+        cleanup: false
+    )
+}
+
+def pipelineParams(Map overrides = [:]) {
+    return [
+        string(name: 'SWARM_URL', defaultValue: overrides.SWARM_URL ?: '',
+               description: 'Swarm server URL'),
+        string(name: 'SWARM_USER', defaultValue: overrides.SWARM_USER ?: '',
+               description: 'Swarm user ID')
+    ]
+}
+
+def execute(Map params, Map ctx) {
+    def ticket = vcsPerforce.createTicket(
+        credential: params.P4_CREDENTIAL,
+        host: params.P4_HOST
+    )
+
+    def response = createReview(
+        user: params.SWARM_USER,
+        ticket: ticket,
+        swarmUrl: params.SWARM_URL,
+        changelistId: ctx.changelist ?: env.P4_CHANGELIST
+    )
+
+    ctx.reviewId = getReviewID(response)
+    ctx.reviewAuthor = getReviewAuthor(response)
+    ctx.swarmUrl = params.SWARM_URL
+}
+
+// ── Direct-use methods ──
+
 def createReview(Map config) {
     def user = config.user
     def ticket = config.ticket
