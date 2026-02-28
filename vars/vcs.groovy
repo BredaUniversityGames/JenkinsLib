@@ -15,9 +15,7 @@ import com.buas.vcs.Git
 @Field def _gitImpl = null
 
 def perforce(Map overrides = [:]) {
-    log.debug("vcs.perforce() called")
     _perforceImpl = new Perforce(this)
-    log.debug("Perforce instance created, calling registerModule")
     stages.registerModule(
         category: 'vcs',
         name: 'Source Control',

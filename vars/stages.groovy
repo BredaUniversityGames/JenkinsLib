@@ -1,5 +1,3 @@
-import groovy.transform.Field
-
 /**
  * Pipeline Orchestrator - Composable pipeline for student game projects.
  *
@@ -28,7 +26,12 @@ import groovy.transform.Field
  *   }
  */
 
-@Field List _modules = []
+// Static registry avoids CPS serialization issues — @Field variables are
+// serialized with each continuation, so changes made inside body() are lost
+// when the continuation resumes. Static fields are not serialized by CPS.
+class ModuleRegistry {
+    static List modules = Collections.synchronizedList(new ArrayList())
+}
 
 /**
  * Register a module with the pipeline orchestrator.
@@ -44,30 +47,23 @@ import groovy.transform.Field
  *   notify    - closure: { status, params, ctx -> ... } (for notify category)
  */
 def registerModule(Map config) {
-    log.debug("registerModule called: category=${config.category}, name=${config.name}, params=${config.params?.size() ?: 0}")
-    _modules << config
-    log.debug("_modules size after add: ${_modules.size()}")
+    ModuleRegistry.modules.add(config)
 }
 
 def call(Closure body) {
-    _modules = []
-    log.debug("Before body(), _modules size: ${_modules.size()}")
+    ModuleRegistry.modules.clear()
     body()
-    log.debug("After body(), _modules size: ${_modules.size()}")
-    def modules = new ArrayList(_modules)
-    _modules = []
+    def modules = new ArrayList(ModuleRegistry.modules)
+    ModuleRegistry.modules.clear()
 
     // Collect parameters from all registered modules
-    log.debug("modules count: ${modules.size()}")
     def allParams = [
         booleanParam(name: 'CLEAN_WORKSPACE', defaultValue: true,
                      description: 'Clean workspace after build')
     ]
     modules.each { mod ->
-        log.debug("Adding params from module: ${mod.name}, params: ${mod.params?.size() ?: 0}")
         allParams.addAll(mod.params ?: [])
     }
-    log.debug("Total allParams: ${allParams.size()}")
     properties([parameters(allParams)])
 
     // Category execution order
