@@ -17,24 +17,25 @@ class Perforce implements Serializable {
             steps.string(name: 'P4_HOST', defaultValue: overrides.P4_HOST ?: 'ssl:perforce.buas.nl:1666',
                    description: 'Perforce server host'),
             steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: "jenkins-${steps.env.JOB_NAME.replace('/', '_')}",
-                   description: 'Perforce workspace template name'),
-            steps.string(name: 'P4_MAPPING', defaultValue: overrides.P4_MAPPING ?: '',
-                   description: 'Perforce depot view mapping (for depot source)'),
+                   description: 'Perforce workspace name (used as template if P4_VIEW is empty)'),
+            steps.string(name: 'P4_VIEW', defaultValue: overrides.P4_VIEW ?: '',
+                   description: 'Workspace view mapping (e.g. //depot/project/... //${P4_WORKSPACE}/...) — if set, overrides P4_WORKSPACE template'),
             steps.booleanParam(name: 'P4_FORCE_CLEAN', defaultValue: overrides.P4_FORCE_CLEAN ?: false,
-                         description: 'Force clean Perforce sync'),
-            steps.booleanParam(name: 'P4_USE_DEPOT_SOURCE', defaultValue: overrides.P4_USE_DEPOT_SOURCE ?: false,
-                         description: 'Use depot source instead of workspace template')
+                         description: 'Force clean Perforce sync')
         ]
     }
 
     def execute(Map params, Map ctx) {
+        if (!params.P4_CREDENTIAL?.trim()) {
+            steps.error("P4_CREDENTIAL is required — set it in Build with Parameters")
+        }
+
         checkout(
             credential:     params.P4_CREDENTIAL,
             host:           params.P4_HOST,
             workspace:      params.P4_WORKSPACE,
-            mapping:        params.P4_MAPPING,
-            forceClean:     params.P4_FORCE_CLEAN,
-            useDepotSource: params.P4_USE_DEPOT_SOURCE
+            view:           params.P4_VIEW,
+            forceClean:     params.P4_FORCE_CLEAN
         )
         ctx.vcsType = 'Perforce'
         ctx.revision = steps.env.P4_CHANGELIST ?: 'unknown'
@@ -46,31 +47,34 @@ class Perforce implements Serializable {
             cleanup(
                 credential: params.P4_CREDENTIAL,
                 workspace:  params.P4_WORKSPACE,
-                mapping:    params.P4_MAPPING
+                view:       params.P4_VIEW
             )
         }
     }
 
     def checkout(Map config) {
         def credential = config.credential
-        def host = config.host
         def workspace = config.workspace
-        def mapping = config.mapping
+        def view = config.view
         def forceClean = config.forceClean ?: false
         def version = config.version ?: ''
-        def useDepotSource = config.useDepotSource ?: false
+        def hasView = view?.trim()
 
-        def source = useDepotSource ? depotSource(mapping) : templateSource(workspace)
-        def format = useDepotSource ? 'jenkins-${JOB_NAME}-${NODE_NAME}' : 'jenkins-${JOB_NAME}'
+        def populate = forceClean
+            ? steps.forceClean(have: false, parallel: [enable: true, minbytes: '1024', minfiles: '1', threads: '4'], pin: version, quiet: true)
+            : steps.autoClean(delete: false, modtime: false, parallel: [enable: false, minbytes: '1024', minfiles: '1', threads: '4'], pin: version, quiet: true, replace: true, tidy: false)
 
-        if (forceClean) {
-            steps.p4sync charset: 'none', credential: credential, format: format,
-                   populate: steps.forceClean(have: false, parallel: [enable: true, minbytes: '1024', minfiles: '1', threads: '4'], pin: version, quiet: true),
-                   source: source
+        if (hasView) {
+            steps.p4sync charset: 'none', credential: credential, format: workspace,
+                   populate: populate,
+                   workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
+                              spec: steps.clientSpec(allwrite: false, backup: true, changeView: '', clobber: true, compress: false,
+                                               line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
+                                               streamName: '', type: 'WRITABLE', view: view))
         } else {
-            steps.p4sync charset: 'none', credential: credential, format: format,
-                   populate: steps.autoClean(delete: false, modtime: false, parallel: [enable: false, minbytes: '1024', minfiles: '1', threads: '4'], pin: version, quiet: true, replace: true, tidy: false),
-                   source: source
+            steps.p4sync charset: 'none', credential: credential, format: workspace,
+                   populate: populate,
+                   source: templateSource(workspace)
         }
     }
 
@@ -111,27 +115,27 @@ class Perforce implements Serializable {
     def unshelve(Map config) {
         def credential = config.credential
         def workspace = config.workspace
-        def mapping = config.mapping
+        def view = config.view
         def shelfId = config.shelfId
 
         steps.p4unshelve credential: credential, ignoreEmpty: false, resolve: 'none', shelf: shelfId, tidy: false,
                    workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
                               spec: steps.clientSpec(allwrite: false, backup: true, changeView: '', clobber: true, compress: false,
                                                line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
-                                               streamName: '', type: 'WRITABLE', view: mapping))
+                                               streamName: '', type: 'WRITABLE', view: view))
     }
 
     def getChangelistDescription(Map config) {
         def credential = config.credential
         def workspace = config.workspace
-        def mapping = config.mapping
+        def view = config.view
         def changelistId = config.changelistId
 
         def p4s = steps.p4(credential: credential,
                      workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
                                 spec: steps.clientSpec(allwrite: true, backup: true, changeView: '', clobber: false, compress: false,
                                                  line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
-                                                 streamName: '', type: 'WRITABLE', view: mapping)))
+                                                 streamName: '', type: 'WRITABLE', view: view)))
         def changeList = p4s.run('describe', '-s', '-S', "${changelistId}")
         def desc = ""
 
@@ -159,18 +163,14 @@ class Perforce implements Serializable {
     def cleanup(Map config) {
         def credential = config.credential
         def workspace = config.workspace
-        def mapping = config.mapping
+        def view = config.view
 
         def p4s = steps.p4(credential: credential,
                      workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
                                 spec: steps.clientSpec(allwrite: true, backup: true, changeView: '', clobber: false, compress: false,
                                                  line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
-                                                 streamName: '', type: 'WRITABLE', view: mapping)))
+                                                 streamName: '', type: 'WRITABLE', view: view)))
         p4s.run('revert', '-c', 'default', '//...')
-    }
-
-    private def depotSource(String mapping) {
-        return steps.depotSource(mapping)
     }
 
     private def templateSource(String workspace) {
