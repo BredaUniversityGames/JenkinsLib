@@ -4,13 +4,14 @@
  */
 
 import groovy.transform.Field
+import com.buas.ModuleRegistry
 import com.buas.review.Swarm
 
 @Field def _swarmImpl = null
 
 def swarm(Map overrides = [:]) {
     _swarmImpl = new Swarm(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'review',
         name: 'Swarm Review',
         params: _swarmImpl.pipelineParams(overrides),

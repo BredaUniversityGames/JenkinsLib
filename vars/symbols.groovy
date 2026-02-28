@@ -4,13 +4,14 @@
  */
 
 import groovy.transform.Field
+import com.buas.ModuleRegistry
 import com.buas.symbols.Sentry
 
 @Field def _sentryImpl = null
 
 def sentry(Map overrides = [:]) {
     _sentryImpl = new Sentry(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'symbols',
         name: 'Debug Symbols',
         params: _sentryImpl.pipelineParams(overrides),

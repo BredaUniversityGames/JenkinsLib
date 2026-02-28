@@ -7,6 +7,7 @@
  */
 
 import groovy.transform.Field
+import com.buas.ModuleRegistry
 import com.buas.vcs.Perforce
 import com.buas.vcs.Git
 
@@ -16,7 +17,7 @@ import com.buas.vcs.Git
 
 def perforce(Map overrides = [:]) {
     _perforceImpl = new Perforce(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'vcs',
         name: 'Source Control',
         params: _perforceImpl.pipelineParams(overrides),
@@ -28,7 +29,7 @@ def perforce(Map overrides = [:]) {
 
 def git(Map overrides = [:]) {
     _gitImpl = new Git(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'vcs',
         name: 'Source Control',
         params: _gitImpl.pipelineParams(overrides),

@@ -5,6 +5,8 @@
  * Thin wrappers that delegate to build module test methods and testRunner.
  */
 
+import com.buas.ModuleRegistry
+
 def ue5(Map overrides = [:]) {
     def testParams = [
         choice(name: 'UE5_TEST_MODE',
@@ -17,7 +19,7 @@ def ue5(Map overrides = [:]) {
                description: 'Test filter category (for RunFiltered mode)')
     ]
 
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'test',
         name: 'Test',
         params: testParams,
@@ -52,7 +54,7 @@ def vs(Map overrides = [:]) {
                description: 'Path to test executable (GoogleTest) or CTest build dir')
     ]
 
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'test',
         name: 'Test',
         params: testParams,

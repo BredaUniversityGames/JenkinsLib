@@ -6,6 +6,7 @@
  */
 
 import groovy.transform.Field
+import com.buas.ModuleRegistry
 import com.buas.build.UE5
 import com.buas.build.VS
 
@@ -15,7 +16,7 @@ import com.buas.build.VS
 
 def ue5(Map overrides = [:]) {
     _ue5Impl = new UE5(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'build',
         name: 'Build',
         params: _ue5Impl.pipelineParams(overrides),
@@ -26,7 +27,7 @@ def ue5(Map overrides = [:]) {
 
 def vs(Map overrides = [:]) {
     _vsImpl = new VS(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'build',
         name: 'Build',
         params: _vsImpl.pipelineParams(overrides),

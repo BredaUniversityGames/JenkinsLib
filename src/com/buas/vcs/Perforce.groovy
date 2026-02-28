@@ -16,7 +16,7 @@ class Perforce implements Serializable {
                    description: 'Jenkins credentials ID for Perforce'),
             steps.string(name: 'P4_HOST', defaultValue: overrides.P4_HOST ?: 'ssl:perforce.buas.nl:1666',
                    description: 'Perforce server host'),
-            steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: '',
+            steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: "jenkins-${steps.env.JOB_NAME}",
                    description: 'Perforce workspace template name'),
             steps.string(name: 'P4_MAPPING', defaultValue: overrides.P4_MAPPING ?: '',
                    description: 'Perforce depot view mapping (for depot source)'),

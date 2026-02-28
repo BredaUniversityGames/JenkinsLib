@@ -26,35 +26,11 @@
  *   }
  */
 
-// Static registry avoids CPS serialization issues — @Field variables are
-// serialized with each continuation, so changes made inside body() are lost
-// when the continuation resumes. Static fields are not serialized by CPS.
-class ModuleRegistry {
-    static List modules = []
-}
-
-/**
- * Register a module with the pipeline orchestrator.
- * Called by each module's registration method during the configuration closure.
- *
- * Module config map supports:
- *   category  - execution category (vcs, build, test, review, deploy, symbols)
- *   name      - display name for the stage
- *   params    - list of Jenkins parameter definitions
- *   execute   - closure: { params, ctx -> ... }
- *   hasCleanup - boolean, whether this module has cleanup
- *   cleanup   - closure: { params, ctx -> ... } (if hasCleanup is true)
- *   notify    - closure: { status, params, ctx -> ... } (for notify category)
- */
-def registerModule(Map config) {
-    ModuleRegistry.modules += [config]
-}
+import com.buas.ModuleRegistry
 
 def call(Closure body) {
-    ModuleRegistry.modules = []
     body()
-    def modules = [] + ModuleRegistry.modules
-    ModuleRegistry.modules = []
+    def modules = ModuleRegistry.drain()
 
     // Collect parameters from all registered modules
     def allParams = [

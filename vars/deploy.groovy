@@ -3,9 +3,11 @@
  * Usage: deploy.steam(), deploy.itch(), deploy.gdrive(), deploy.epic()
  */
 
+import com.buas.ModuleRegistry
+
 def steam(Map overrides = [:]) {
     def impl = new com.buas.deploy.Steam(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'deploy',
         name: 'Steam',
         params: impl.pipelineParams(overrides),
@@ -16,7 +18,7 @@ def steam(Map overrides = [:]) {
 
 def itch(Map overrides = [:]) {
     def impl = new com.buas.deploy.Itch(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'deploy',
         name: 'itch.io',
         params: impl.pipelineParams(overrides),
@@ -27,7 +29,7 @@ def itch(Map overrides = [:]) {
 
 def gdrive(Map overrides = [:]) {
     def impl = new com.buas.deploy.GDrive(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'deploy',
         name: 'Google Drive',
         params: impl.pipelineParams(overrides),
@@ -38,7 +40,7 @@ def gdrive(Map overrides = [:]) {
 
 def epic(Map overrides = [:]) {
     def impl = new com.buas.deploy.Epic(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'deploy',
         name: 'Epic Games Store',
         params: impl.pipelineParams(overrides),

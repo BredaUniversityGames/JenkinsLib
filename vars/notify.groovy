@@ -4,13 +4,14 @@
  */
 
 import groovy.transform.Field
+import com.buas.ModuleRegistry
 import com.buas.notify.Discord
 
 @Field def _discordImpl = null
 
 def discord(Map overrides = [:]) {
     _discordImpl = new Discord(this)
-    stages.registerModule(
+    ModuleRegistry.register(
         category: 'notify',
         name: 'Discord',
         params: _discordImpl.pipelineParams(overrides),
