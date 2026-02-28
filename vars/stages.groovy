@@ -47,14 +47,14 @@ class ModuleRegistry {
  *   notify    - closure: { status, params, ctx -> ... } (for notify category)
  */
 def registerModule(Map config) {
-    ModuleRegistry.modules.add(config)
+    ModuleRegistry.modules += [config]
 }
 
 def call(Closure body) {
-    ModuleRegistry.modules.clear()
+    ModuleRegistry.modules = []
     body()
-    def modules = ModuleRegistry.modules.collect()
-    ModuleRegistry.modules.clear()
+    def modules = [] + ModuleRegistry.modules
+    ModuleRegistry.modules = []
 
     // Collect parameters from all registered modules
     def allParams = [
