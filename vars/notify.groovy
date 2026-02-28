@@ -3,9 +3,10 @@
  * Usage: notify.discord()
  */
 
+import groovy.transform.Field
 import com.buas.notify.Discord
 
-private def _discordImpl = null
+@Field def _discordImpl = null
 
 def discord(Map overrides = [:]) {
     _discordImpl = new Discord(this)

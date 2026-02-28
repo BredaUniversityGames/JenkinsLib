@@ -3,9 +3,10 @@
  * Usage: review.swarm()
  */
 
+import groovy.transform.Field
 import com.buas.review.Swarm
 
-private def _swarmImpl = null
+@Field def _swarmImpl = null
 
 def swarm(Map overrides = [:]) {
     _swarmImpl = new Swarm(this)

@@ -6,12 +6,13 @@
  * After registration, use vcs.createTicket(), vcs.getCommitHash(), etc.
  */
 
+import groovy.transform.Field
 import com.buas.vcs.Perforce
 import com.buas.vcs.Git
 
 // Store impl references for cross-module access (e.g., review.swarm() needs vcs.createTicket())
-private def _perforceImpl = null
-private def _gitImpl = null
+@Field def _perforceImpl = null
+@Field def _gitImpl = null
 
 def perforce(Map overrides = [:]) {
     _perforceImpl = new Perforce(this)

@@ -3,9 +3,10 @@
  * Usage: symbols.sentry()
  */
 
+import groovy.transform.Field
 import com.buas.symbols.Sentry
 
-private def _sentryImpl = null
+@Field def _sentryImpl = null
 
 def sentry(Map overrides = [:]) {
     _sentryImpl = new Sentry(this)

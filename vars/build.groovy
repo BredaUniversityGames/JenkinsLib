@@ -5,12 +5,13 @@
  * UE5 test methods are also accessible via build.runTests(), build.getTestResults(), etc.
  */
 
+import groovy.transform.Field
 import com.buas.build.UE5
 import com.buas.build.VS
 
 // Store impl references for cross-module access (e.g., test.ue5() needs build.runTests())
-private def _ue5Impl = null
-private def _vsImpl = null
+@Field def _ue5Impl = null
+@Field def _vsImpl = null
 
 def ue5(Map overrides = [:]) {
     _ue5Impl = new UE5(this)
