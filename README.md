@@ -36,8 +36,8 @@ See the **[Wiki](../../wiki)** for full documentation:
 | Category | Stages |
 | --- | --- |
 | Version Control | [vcs.perforce()](../../wiki/stages/vcs/Perforce), [vcs.git()](../../wiki/stages/vcs/Git) |
-| Build | [build.ue5()](../../wiki/stages/build/UE5), [build.vs()](../../wiki/stages/build/VS) |
-| Testing | [test.ue5()](../../wiki/stages/test/UE5), [test.vs()](../../wiki/stages/test/VS) |
+| Build | [build.ue5()](../../wiki/stages/build/Build-UE5), [build.vs()](../../wiki/stages/build/Build-VS) |
+| Testing | [test.ue5()](../../wiki/stages/test/Test-UE5), [test.vs()](../../wiki/stages/test/Test-VS) |
 | Deployment | [deploy.steam()](../../wiki/stages/deploy/Steam), [deploy.itch()](../../wiki/stages/deploy/Itch), [deploy.gdrive()](../../wiki/stages/deploy/GDrive), [deploy.epic()](../../wiki/stages/deploy/Epic) |
 | Code Review | [review.swarm()](../../wiki/stages/review/Swarm) |
 | Debug Symbols | [symbols.sentry()](../../wiki/stages/symbols/Sentry) |
