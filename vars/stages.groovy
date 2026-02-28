@@ -44,23 +44,30 @@ import groovy.transform.Field
  *   notify    - closure: { status, params, ctx -> ... } (for notify category)
  */
 def registerModule(Map config) {
+    log.debug("registerModule called: category=${config.category}, name=${config.name}, params=${config.params?.size() ?: 0}")
     _modules << config
+    log.debug("_modules size after add: ${_modules.size()}")
 }
 
 def call(Closure body) {
     _modules = []
+    log.debug("Before body(), _modules size: ${_modules.size()}")
     body()
+    log.debug("After body(), _modules size: ${_modules.size()}")
     def modules = new ArrayList(_modules)
     _modules = []
 
     // Collect parameters from all registered modules
+    log.debug("modules count: ${modules.size()}")
     def allParams = [
         booleanParam(name: 'CLEAN_WORKSPACE', defaultValue: true,
                      description: 'Clean workspace after build')
     ]
     modules.each { mod ->
+        log.debug("Adding params from module: ${mod.name}, params: ${mod.params?.size() ?: 0}")
         allParams.addAll(mod.params ?: [])
     }
+    log.debug("Total allParams: ${allParams.size()}")
     properties([parameters(allParams)])
 
     // Category execution order

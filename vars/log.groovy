@@ -3,6 +3,11 @@ def call(message)
    echo "${message}"
 }
 
+def debug(message)
+{
+   echo "DEBUG: ${message}"
+}
+
 def warning(message)
 {
    echo "Warning: ${message}"
