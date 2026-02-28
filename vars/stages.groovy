@@ -30,7 +30,7 @@
 // serialized with each continuation, so changes made inside body() are lost
 // when the continuation resumes. Static fields are not serialized by CPS.
 class ModuleRegistry {
-    static List modules = Collections.synchronizedList(new ArrayList())
+    static List modules = []
 }
 
 /**
@@ -53,7 +53,7 @@ def registerModule(Map config) {
 def call(Closure body) {
     ModuleRegistry.modules.clear()
     body()
-    def modules = new ArrayList(ModuleRegistry.modules)
+    def modules = ModuleRegistry.modules.collect()
     ModuleRegistry.modules.clear()
 
     // Collect parameters from all registered modules
