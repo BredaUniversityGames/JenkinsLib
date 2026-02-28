@@ -12,31 +12,31 @@ library identifier: 'JenkinsLib@main',
       remote: 'https://github.com/BredaUniversityGames/JenkinsLib'
     ])
 
-buasPipeline {
+stages {
     // ── Version Control (pick one) ──
-    vcsPerforce()
-    // vcsGit()
+    vcs.perforce()
+    // vcs.git()
 
     // ── Build Engine (pick one) ──
-    buildUE5()
-    // buildVS()
+    build.ue5()
+    // build.vs()
 
     // ── Testing (pick one, must match build engine) ──
-    // testUE5()
-    // testVS()
+    // test.ue5()
+    // test.vs()
 
     // ── Code Review ──
-    // reviewSwarm()
+    // review.swarm()
 
     // ── Deployment (enable any combination) ──
-    // deploySteam()
-    // deployItch()
-    // deployGDrive()
-    // deployEpic()
+    // deploy.steam()
+    // deploy.itch()
+    // deploy.gdrive()
+    // deploy.epic()
 
     // ── Debug Symbols ──
-    // symbolsSentry()
+    // symbols.sentry()
 
     // ── Notifications ──
-    notifyDiscord()
+    notify.discord()
 }

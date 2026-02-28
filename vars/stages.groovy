@@ -1,7 +1,7 @@
 import groovy.transform.Field
 
 /**
- * BUAS Pipeline - Composable pipeline orchestrator for student game projects.
+ * Pipeline Orchestrator - Composable pipeline for student game projects.
  *
  * Usage: In your project's Jenkinsfile, compose modules:
  *
@@ -9,22 +9,22 @@ import groovy.transform.Field
  *       retriever: modernSCM([$class: 'GitSCMSource',
  *           remote: 'https://github.com/BredaUniversityGames/JenkinsLib'])
  *
- *   buasPipeline {
- *       vcsPerforce()
- *       buildUE5()
- *       // testUE5()
- *       deploySteam()
- *       notifyDiscord()
+ *   stages {
+ *       vcs.perforce()
+ *       build.ue5()
+ *       // test.ue5()
+ *       deploy.steam()
+ *       notify.discord()
  *   }
  *
  * Comment/uncomment modules to add/remove both their stages AND parameters.
  * Each module can accept overrides for default parameter values:
  *
- *   buasPipeline {
- *       vcsPerforce(P4_HOST: 'ssl:custom.host:1666')
- *       buildUE5(BUILD_CONFIG: 'Shipping')
- *       deploySteam()
- *       notifyDiscord()
+ *   stages {
+ *       vcs.perforce(P4_HOST: 'ssl:custom.host:1666')
+ *       build.ue5(BUILD_CONFIG: 'Shipping')
+ *       deploy.steam()
+ *       notify.discord()
  *   }
  */
 
@@ -32,7 +32,16 @@ import groovy.transform.Field
 
 /**
  * Register a module with the pipeline orchestrator.
- * Called by each module's call() method during the configuration closure.
+ * Called by each module's registration method during the configuration closure.
+ *
+ * Module config map supports:
+ *   category  - execution category (vcs, build, test, review, deploy, symbols)
+ *   name      - display name for the stage
+ *   params    - list of Jenkins parameter definitions
+ *   execute   - closure: { params, ctx -> ... }
+ *   hasCleanup - boolean, whether this module has cleanup
+ *   cleanup   - closure: { params, ctx -> ... } (if hasCleanup is true)
+ *   notify    - closure: { status, params, ctx -> ... } (for notify category)
  */
 def registerModule(Map config) {
     _modules << config
@@ -74,7 +83,7 @@ def call(Closure body) {
                                 branches[m.name] = {
                                     stage(m.name) {
                                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                                            m.ref.execute(params, ctx)
+                                            m.execute(params, ctx)
                                         }
                                     }
                                 }
@@ -85,7 +94,7 @@ def call(Closure body) {
                         for (mod in mods) {
                             stage(mod.name) {
                                 log.currStage()
-                                mod.ref.execute(params, ctx)
+                                mod.execute(params, ctx)
                             }
                         }
                     }
@@ -101,16 +110,16 @@ def call(Closure body) {
                 // Run notification modules
                 modules.findAll { it.category == 'notify' }.each { mod ->
                     try {
-                        mod.ref.executeNotify(status, params, ctx)
+                        mod.notify(status, params, ctx)
                     } catch (notifyErr) {
                         log.warning("Notification failed: ${notifyErr}")
                     }
                 }
 
                 // Run module cleanup
-                modules.findAll { it.cleanup == true }.each { mod ->
+                modules.findAll { it.hasCleanup == true }.each { mod ->
                     try {
-                        mod.ref.executeCleanup(params, ctx)
+                        mod.cleanup(params, ctx)
                     } catch (cleanupErr) {
                         log.warning("Cleanup failed for ${mod.name}: ${cleanupErr}")
                     }
