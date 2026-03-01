@@ -18,12 +18,12 @@ class UE5 implements Serializable {
         def prev = steps.params ?: [:]
         def engineParam = engineVersionParam(overrides, prev)
         return [
+            steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
+                   description: 'Relative path to .uproject file (from workspace root)'),
+            engineParam,
             steps.choice(name: 'UE5_BUILD_METHOD',
                    choices: reorderChoices(overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'], prev.UE5_BUILD_METHOD),
                    description: 'UE5 build method'),
-            engineParam,
-            steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
-                   description: 'Relative path to .uproject file (from workspace root)'),
             steps.string(name: 'UE5_CUSTOM_FLAGS',
                    defaultValue: overrides.UE5_CUSTOM_FLAGS ?: prev.UE5_CUSTOM_FLAGS ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package',
                    description: 'Custom RunUAT flags (only for Custom build method)'),
