@@ -17,7 +17,7 @@ stages {
     // ue5.test()
     // steam.deploy()
     // itch.deploy()
-    discord.notify()
+    discord.alert()
 }
 ```
 
@@ -41,4 +41,4 @@ See the **[Wiki](../../wiki)** for full documentation:
 | Deployment | [steam.deploy()](../../wiki/Steam), [itch.deploy()](../../wiki/Itch), [gdrive.deploy()](../../wiki/GDrive), [epic.deploy()](../../wiki/Epic) |
 | Code Review | [swarm.review()](../../wiki/Swarm) |
 | Debug Symbols | [sentry.upload()](../../wiki/Sentry) |
-| Notifications | [discord.notify()](../../wiki/Discord) |
+| Notifications | [discord.alert()](../../wiki/Discord) |

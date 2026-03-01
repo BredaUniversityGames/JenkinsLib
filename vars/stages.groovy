@@ -12,7 +12,7 @@
  *       ue5.build()
  *       // ue5.test()
  *       steam.deploy()
- *       discord.notify()
+ *       discord.alert()
  *   }
  *
  * Comment/uncomment modules to add/remove both their stages AND parameters.
@@ -22,7 +22,7 @@
  *       perforce.sync(P4_HOST: 'ssl:custom.host:1666')
  *       ue5.build(UE5_BUILD_CONFIG: 'Shipping')
  *       steam.deploy()
- *       discord.notify()
+ *       discord.alert()
  *   }
  */
 

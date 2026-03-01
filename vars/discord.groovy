@@ -1,6 +1,6 @@
 /**
  * Discord notification module.
- * Usage: discord.notify()
+ * Usage: discord.alert()
  *
  * Direct-use methods are available after registration:
  * discord.send(), discord.sendTestReport(), discord.sendCustom(), etc.
@@ -12,7 +12,7 @@ import com.buas.notify.Discord
 
 @Field def _impl = null
 
-void notify(Map overrides = [:]) {
+def alert(Map overrides = [:]) {
     _impl = new Discord(this)
     ModuleRegistry.register(
         category: 'notify',

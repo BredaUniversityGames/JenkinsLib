@@ -34,5 +34,5 @@ stages {
     // sentry.upload()
 
     // ── Notifications ──
-    discord.notify()
+    discord.alert()
 }
