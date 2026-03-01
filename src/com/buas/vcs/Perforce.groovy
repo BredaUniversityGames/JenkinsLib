@@ -17,7 +17,7 @@ class Perforce implements Serializable {
                    description: 'Jenkins credentials ID for Perforce'),
             steps.string(name: 'P4_HOST', defaultValue: overrides.P4_HOST ?: prev.P4_HOST ?: 'ssl:perforce.buas.nl:1666',
                    description: 'Perforce server host'),
-            steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: prev.P4_WORKSPACE ?: "jenkins-${steps.env.JOB_NAME.replace('/', '_')}",
+            steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: prev.P4_WORKSPACE ?: "jenkins-${steps.env.JOB_NAME.replace('/', '-')}",
                    description: 'Perforce workspace name (used as template if P4_VIEW is empty)'),
             steps.string(name: 'P4_VIEW', defaultValue: overrides.P4_VIEW ?: prev.P4_VIEW ?: '',
                    description: 'Workspace view mapping (e.g. //depot/project/... //${P4_WORKSPACE}/...) — if set, overrides P4_WORKSPACE template'),
