@@ -14,14 +14,15 @@ class UE5 implements Serializable {
         this.steps = steps
     }
 
-    def pipelineParams(Map overrides = [:], List detectedVersions = []) {
+    def pipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
-        def engineParam = engineVersionParam(overrides, prev, detectedVersions)
         return [
             steps.choice(name: 'UE5_BUILD_METHOD',
                    choices: reorderChoices(overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'], prev.UE5_BUILD_METHOD),
                    description: 'UE5 build method'),
-            engineParam,
+            steps.string(name: 'UE5_ENGINE_VERSION',
+                   defaultValue: overrides.UE5_ENGINE_VERSION ?: prev.UE5_ENGINE_VERSION ?: '',
+                   description: 'UE5 engine version (e.g. 5.3). Must match a folder in UE5_ENGINE_ROOT on the build agent.'),
             steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
                    description: 'Absolute path to .uproject file'),
             steps.string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: prev.UE5_PROJECT_NAME ?: '',
@@ -38,18 +39,6 @@ class UE5 implements Serializable {
             steps.booleanParam(name: 'UE5_MATCH_BUILD_ID', defaultValue: overrides.UE5_MATCH_BUILD_ID ?: prev.UE5_MATCH_BUILD_ID ?: false,
                          description: 'Run MatchBuildID.py before build (for precompiled engines with plugins)')
         ]
-    }
-
-    private def engineVersionParam(Map overrides, Map prev, List detectedVersions) {
-        if (detectedVersions) {
-            def engineRoot = steps.env.UE5_ENGINE_ROOT
-            return steps.choice(name: 'UE5_ENGINE_VERSION',
-                   choices: reorderChoices(detectedVersions, prev.UE5_ENGINE_VERSION),
-                   description: "Detected UE5 versions in ${engineRoot}")
-        }
-        return steps.string(name: 'UE5_ENGINE_VERSION',
-               defaultValue: overrides.UE5_ENGINE_VERSION ?: prev.UE5_ENGINE_VERSION ?: '',
-               description: 'UE5 engine version (e.g. 5.3). Set UE5_ENGINE_ROOT env var on the node.')
     }
 
     private String resolveEnginePath(Map params) {

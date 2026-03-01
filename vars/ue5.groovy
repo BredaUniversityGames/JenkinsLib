@@ -12,37 +12,12 @@ import com.buas.build.UE5
 
 @Field def _impl = null
 
-/**
- * Scans UE5_ENGINE_ROOT for installed engine versions.
- * Must live in vars/ (not src/) to run as trusted code outside the Groovy sandbox.
- */
-@NonCPS
-static List detectEngines(String engineRoot) {
-    def root = new File(engineRoot)
-    if (!root.isDirectory()) { return [] }
-    return root.listFiles()
-        .findAll { dir ->
-            dir.isDirectory() &&
-            new File(dir, 'Engine\\Build\\BatchFiles\\RunUAT.bat').exists()
-        }
-        .collect { dir ->
-            def m = (dir.name =~ /^UE_?(.+)$/)
-            m.matches() ? m[0][1] : dir.name
-        }
-        .sort()
-        .reverse()
-}
-
 def build(Map overrides = [:]) {
     _impl = new UE5(this)
-
-    def engineRoot = env.UE5_ENGINE_ROOT
-    def detectedVersions = engineRoot ? detectEngines(engineRoot) : []
-
     ModuleRegistry.register(
         category: 'build',
         name: 'Build',
-        params: _impl.pipelineParams(overrides, detectedVersions),
+        params: _impl.pipelineParams(overrides),
         execute: { params, ctx -> _impl.execute(params, ctx) },
         hasCleanup: false
     )

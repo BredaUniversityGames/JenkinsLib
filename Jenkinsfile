@@ -6,11 +6,7 @@
 //
 // See README.md for full documentation.
 
-library identifier: 'JenkinsLib@main',
-    retriever: modernSCM([
-      $class: 'GitSCMSource',
-      remote: 'https://github.com/BredaUniversityGames/JenkinsLib'
-    ])
+@Library('JenkinsLib') _
 
 stages {
     // ── Version Control (pick one) ──
