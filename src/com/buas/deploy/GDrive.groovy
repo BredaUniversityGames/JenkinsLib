@@ -51,7 +51,8 @@ class GDrive implements Serializable {
         if (!folderId)      { steps.error("GDRIVE_FOLDER_ID is required") }
 
         def platformDir = steps.utilWin.platformOutputDir(platform)
-        def archiveName = "${steps.env.JOB_BASE_NAME}_${steps.env.BUILD_NUMBER}"
+        def buildNum = String.format('%03d', steps.env.BUILD_NUMBER as int)
+        def archiveName = "${steps.env.JOB_BASE_NAME}_${buildNum}"
         def sourceDir = "${source}\\${platformDir}"
 
         steps.utilZip.pack(sourceDir, archiveName, false)
