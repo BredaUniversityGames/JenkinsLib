@@ -35,10 +35,10 @@ See the **[Wiki](../../wiki)** for full documentation:
 
 | Category | Stages |
 | --- | --- |
-| Version Control | [perforce.sync()](../../wiki/stages/vcs/Perforce), [git.sync()](../../wiki/stages/vcs/Git) |
-| Build | [ue5.build()](../../wiki/stages/build/Build-UE5), [vs.build()](../../wiki/stages/build/Build-VS) |
-| Testing | [ue5.test()](../../wiki/stages/test/Test-UE5), [vs.test()](../../wiki/stages/test/Test-VS) |
-| Deployment | [steam.deploy()](../../wiki/stages/deploy/Steam), [itch.deploy()](../../wiki/stages/deploy/Itch), [gdrive.deploy()](../../wiki/stages/deploy/GDrive), [epic.deploy()](../../wiki/stages/deploy/Epic) |
-| Code Review | [swarm.review()](../../wiki/stages/review/Swarm) |
-| Debug Symbols | [sentry.upload()](../../wiki/stages/symbols/Sentry) |
-| Notifications | [discord.notify()](../../wiki/stages/notify/Discord) |
+| Version Control | [perforce.sync()](../../wiki/Perforce), [git.sync()](../../wiki/Git) |
+| Build | [ue5.build()](../../wiki/Build-UE5), [vs.build()](../../wiki/Build-VS) |
+| Testing | [ue5.test()](../../wiki/Test-UE5), [vs.test()](../../wiki/Test-VS) |
+| Deployment | [steam.deploy()](../../wiki/Steam), [itch.deploy()](../../wiki/Itch), [gdrive.deploy()](../../wiki/GDrive), [epic.deploy()](../../wiki/Epic) |
+| Code Review | [swarm.review()](../../wiki/Swarm) |
+| Debug Symbols | [sentry.upload()](../../wiki/Sentry) |
+| Notifications | [discord.notify()](../../wiki/Discord) |
