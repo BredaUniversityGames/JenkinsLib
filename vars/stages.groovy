@@ -87,12 +87,14 @@ def call(Closure body) {
             } finally {
                 def status = currentBuild.result ?: 'SUCCESS'
 
-                // Run notification modules
+                // Run alert modules
                 modules.findAll { it.category == 'alert' }.each { mod ->
-                    try {
-                        mod.alert(status, params, ctx)
-                    } catch (notifyErr) {
-                        log.warning("Notification failed: ${notifyErr}")
+                    stage(mod.name) {
+                        try {
+                            mod.alert(status, params, ctx)
+                        } catch (alertErr) {
+                            log.warning("Alert failed: ${alertErr}")
+                        }
                     }
                 }
 
