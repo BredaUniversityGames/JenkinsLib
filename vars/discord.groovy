@@ -12,7 +12,7 @@ import com.buas.notify.Discord
 
 @Field def _impl = null
 
-def notify(Map overrides = [:]) {
+void notify(Map overrides = [:]) {
     _impl = new Discord(this)
     ModuleRegistry.register(
         category: 'notify',
