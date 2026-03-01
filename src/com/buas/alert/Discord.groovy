@@ -1,4 +1,4 @@
-package com.buas.notify
+package com.buas.alert
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper

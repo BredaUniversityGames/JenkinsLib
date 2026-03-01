@@ -8,17 +8,17 @@
 
 import groovy.transform.Field
 import com.buas.ModuleRegistry
-import com.buas.notify.Discord
+import com.buas.alert.Discord
 
 @Field def _impl = null
 
 def alert(Map overrides = [:]) {
     _impl = new Discord(this)
     ModuleRegistry.register(
-        category: 'notify',
+        category: 'alert',
         name: 'Discord Notify',
         params: _impl.pipelineParams(overrides),
-        notify: { status, params, ctx -> _impl.executeNotify(status, params, ctx) },
+        alert: { status, params, ctx -> _impl.executeNotify(status, params, ctx) },
         hasCleanup: false
     )
 }
