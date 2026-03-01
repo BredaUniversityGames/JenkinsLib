@@ -65,6 +65,8 @@ class GDrive implements Serializable {
             def uploadUrl = initResumableUpload(token, "${archiveName}.zip", folderId)
             uploadChunked(uploadUrl, zipPath, token)
         }
+
+        new File(zipPath).delete()
     }
 
     private String createJwt(String authFilePath) {
