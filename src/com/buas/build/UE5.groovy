@@ -34,7 +34,7 @@ class UE5 implements Serializable {
                    choices: reorderChoices(overrides.UE5_BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'], prev.UE5_BUILD_PLATFORM),
                    description: 'Target platform'),
             steps.booleanParam(name: 'UE5_MATCH_BUILD_ID', defaultValue: overrides.UE5_MATCH_BUILD_ID ?: prev.UE5_MATCH_BUILD_ID ?: false,
-                         description: 'Run MatchBuildID.py before build (for precompiled engines with plugins)')
+                         description: 'Patch project plugin BuildIds to match the engine (required for precompiled engines)')
         ]
     }
 
