@@ -16,12 +16,12 @@ class UE5 implements Serializable {
 
     def pipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
+        def engineParam = engineVersionParam(overrides, prev)
         return [
             steps.choice(name: 'UE5_BUILD_METHOD',
                    choices: reorderChoices(overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'], prev.UE5_BUILD_METHOD),
                    description: 'UE5 build method'),
-            steps.string(name: 'UE5_ENGINE_ROOT', defaultValue: overrides.UE5_ENGINE_ROOT ?: prev.UE5_ENGINE_ROOT ?: '',
-                   description: 'Path to UE5 engine root (e.g. C:\\UE_5.3)'),
+            engineParam,
             steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
                    description: 'Absolute path to .uproject file'),
             steps.string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: prev.UE5_PROJECT_NAME ?: '',
@@ -40,6 +40,63 @@ class UE5 implements Serializable {
         ]
     }
 
+    private def engineVersionParam(Map overrides, Map prev) {
+        def engineRoot = steps.env.UE5_ENGINE_ROOT
+        if (engineRoot) {
+            def versions = detectEngines(engineRoot)
+            if (versions) {
+                return steps.choice(name: 'UE5_ENGINE_VERSION',
+                       choices: reorderChoices(versions, prev.UE5_ENGINE_VERSION),
+                       description: "Detected UE5 versions in ${engineRoot}")
+            }
+        }
+        return steps.string(name: 'UE5_ENGINE_VERSION',
+               defaultValue: overrides.UE5_ENGINE_VERSION ?: prev.UE5_ENGINE_VERSION ?: '',
+               description: 'UE5 engine version (e.g. 5.3). Set UE5_ENGINE_ROOT env var for auto-detection.')
+    }
+
+    @NonCPS
+    private static List detectEngines(String engineRoot) {
+        def root = new File(engineRoot)
+        if (!root.isDirectory()) { return [] }
+        return root.listFiles()
+            .findAll { dir ->
+                dir.isDirectory() &&
+                new File(dir, 'Engine\\Build\\BatchFiles\\RunUAT.bat').exists()
+            }
+            .collect { dir ->
+                def m = (dir.name =~ /^UE_?(.+)$/)
+                m.matches() ? m[0][1] : dir.name
+            }
+            .sort()
+            .reverse()
+    }
+
+    private String resolveEnginePath(Map params) {
+        def version = params.UE5_ENGINE_VERSION
+        def engineRoot = steps.env.UE5_ENGINE_ROOT
+        if (!engineRoot) {
+            steps.error("UE5_ENGINE_ROOT environment variable is not set. Configure it in Manage Jenkins > Nodes > (node) > Environment variables.")
+        }
+        if (!version) {
+            steps.error("UE5_ENGINE_VERSION is not set. Select an engine version or configure UE5_ENGINE_ROOT for auto-detection.")
+        }
+
+        def candidates = ["UE_${version}", "UE${version}"]
+        for (name in candidates) {
+            def path = "${engineRoot}\\${name}"
+            if (steps.bat(script: "if exist \"${path}\\Engine\\Build\\BatchFiles\\RunUAT.bat\" (exit /b 0) else (exit /b 1)",
+                          label: "Verify UE5 ${version} on agent", returnStatus: true) == 0) {
+                return path
+            }
+        }
+
+        steps.error("UE5 engine version '${version}' not found on this agent. " +
+                     "Expected one of: ${candidates.collect { "${engineRoot}\\${it}" }.join(', ')}. " +
+                     "Ask an administrator to install UE ${version} on this node.")
+        return null
+    }
+
     private static List reorderChoices(List choices, def current) {
         if (current && choices.contains(current)) {
             return [current] + (choices - current)
@@ -48,17 +105,19 @@ class UE5 implements Serializable {
     }
 
     def execute(Map params, Map ctx) {
+        def engineRoot = resolveEnginePath(params)
+
         if (params.MATCH_BUILD_ID) {
             def projectDir = params.UE5_PROJECT_PATH.substring(0,
                 params.UE5_PROJECT_PATH.lastIndexOf('\\'))
             steps.utilPython.runScript(
                 "${steps.env.WORKSPACE}\\JenkinsLib\\scripts\\MatchBuildID.py",
-                "\"${projectDir}\" \"${params.UE5_ENGINE_ROOT}\" \"false\""
+                "\"${projectDir}\" \"${engineRoot}\" \"false\""
             )
         }
 
         build(
-            engineRoot:  params.UE5_ENGINE_ROOT,
+            engineRoot:  engineRoot,
             projectName: params.UE5_PROJECT_NAME,
             project:     params.UE5_PROJECT_PATH,
             config:      params.BUILD_CONFIG,
@@ -70,7 +129,7 @@ class UE5 implements Serializable {
 
         ctx.buildConfig = params.BUILD_CONFIG
         ctx.buildPlatform = params.BUILD_PLATFORM
-        ctx.engineRoot = params.UE5_ENGINE_ROOT
+        ctx.engineRoot = engineRoot
         ctx.projectPath = params.UE5_PROJECT_PATH
         ctx.buildEngine = 'UE5'
     }
@@ -88,7 +147,7 @@ class UE5 implements Serializable {
         switch (method) {
             case 'Blueprint':
                 steps.bat(label: "Package UE5 Blueprint project",
-                    script: "\"${engineRoot}\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
+                    script: "\"${engineRoot}\\Engine\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
                             "-Project=\"${project}\" -NoP4 -Distribution " +
                             "-TargetPlatform=${platform} -Platform=${platform} " +
                             "-ClientConfig=${buildConfig} -ServerConfig=${buildConfig} " +
@@ -98,7 +157,7 @@ class UE5 implements Serializable {
 
             case 'Precompiled':
                 steps.bat(label: "Package UE5 Precompiled project",
-                    script: "\"${engineRoot}\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
+                    script: "\"${engineRoot}\\Engine\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
                             "-Project=\"${project}\" -NoP4 " +
                             "-nocompileeditor -skipbuildeditor " +
                             "-TargetPlatform=${platform} -Platform=${platform} " +
@@ -110,7 +169,7 @@ class UE5 implements Serializable {
 
             case 'Custom':
                 steps.bat(label: "Package UE5 Custom project",
-                    script: "\"${engineRoot}\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
+                    script: "\"${engineRoot}\\Engine\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
                             "-Project=\"${project}\" -NoP4 -Distribution " +
                             "-TargetPlatform=${platform} -Platform=${platform} " +
                             "-ClientConfig=${buildConfig} -ServerConfig=${buildConfig} " +
@@ -159,7 +218,7 @@ class UE5 implements Serializable {
 
         steps.log("Running tests: ${testCommand} in ${buildConfig} on ${platform}")
         def result = steps.bat(label: "Run UE5 Automation Tests",
-            script: "\"${engineRoot}\\Binaries\\${platform}\\UnrealEditor-Cmd.exe\" " +
+            script: "\"${engineRoot}\\Engine\\Binaries\\${platform}\\UnrealEditor-Cmd.exe\" " +
                     "\"${project}\" -stdout -fullstdlogoutput -buildmachine -nullrhi " +
                     "-unattended -NoPause -NoSplash -NoSound " +
                     "-ExecCmds=\"Automation ${testCommand};Quit\" " +
@@ -206,7 +265,7 @@ class UE5 implements Serializable {
         def platform = config.platform ?: 'Win64'
 
         steps.bat(label: "Fix up redirectors in UE5 project",
-            script: "\"${engineRoot}\\Binaries\\${platform}\\UnrealEditor.exe\" \"${project}\" " +
+            script: "\"${engineRoot}\\Engine\\Binaries\\${platform}\\UnrealEditor.exe\" \"${project}\" " +
                     "-run=ResavePackages -fixupredirects -autocheckout -projectonly -unattended -stdout")
     }
 }
