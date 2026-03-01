@@ -106,26 +106,23 @@ class UE5 implements Serializable {
         def engineRoot = resolveEnginePath(params)
         def projectPath = "${steps.env.WORKSPACE}\\${params.UE5_PROJECT_PATH}"
 
-        if (params.UE5_MATCH_BUILD_ID) {
-            def projectDir = projectPath.substring(0,
-                projectPath.lastIndexOf('\\'))
-            def script = steps.libraryResource('scripts/MatchBuildID.py')
-            steps.writeFile(file: 'MatchBuildID.py', text: script)
-            steps.utilPython.runScript(
-                "${steps.env.WORKSPACE}\\MatchBuildID.py",
-                "\"${projectDir}\" \"${engineRoot}\" \"false\""
+        steps.lock(resource: "ue5-build-${steps.env.NODE_NAME}") {
+            if (params.UE5_MATCH_BUILD_ID) {
+                def projectDir = projectPath.substring(0,
+                    projectPath.lastIndexOf('\\'))
+                matchBuildId(engineRoot, projectDir)
+            }
+
+            build(
+                engineRoot:  engineRoot,
+                project:     projectPath,
+                config:      params.UE5_BUILD_CONFIG,
+                platform:    params.UE5_BUILD_PLATFORM,
+                outputDir:   ctx.outputDir,
+                method:      params.UE5_BUILD_METHOD,
+                customFlags: params.UE5_CUSTOM_FLAGS
             )
         }
-
-        build(
-            engineRoot:  engineRoot,
-            project:     projectPath,
-            config:      params.UE5_BUILD_CONFIG,
-            platform:    params.UE5_BUILD_PLATFORM,
-            outputDir:   ctx.outputDir,
-            method:      params.UE5_BUILD_METHOD,
-            customFlags: params.UE5_CUSTOM_FLAGS
-        )
 
         ctx.buildConfig = params.UE5_BUILD_CONFIG
         ctx.buildPlatform = params.UE5_BUILD_PLATFORM
@@ -177,6 +174,22 @@ class UE5 implements Serializable {
 
             default:
                 steps.error("Unknown UE5 build method: ${method}. Valid methods: Blueprint, Precompiled, Custom")
+        }
+    }
+
+    @NonCPS
+    private void matchBuildId(String engineRoot, String projectDir) {
+        def sourceFile = new File(engineRoot, 'Engine/Plugins/Animation/LiveLink/Binaries/Win64/UnrealEditor.modules')
+        def sourceBuildId = new groovy.json.JsonSlurper().parseText(sourceFile.text).BuildId
+
+        def projectPath = new File(projectDir)
+        projectPath.eachFileRecurse { file ->
+            if (file.path.replace('\\', '/').matches('.*/Plugins/.*/Binaries/Win64/UnrealEditor\\.modules')) {
+                file.writable = true
+                def data = new groovy.json.JsonSlurper().parseText(file.text)
+                data.BuildId = sourceBuildId
+                file.text = groovy.json.JsonOutput.toJson(data)
+            }
         }
     }
 
