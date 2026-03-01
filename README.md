@@ -12,12 +12,12 @@ library identifier: 'JenkinsLib@main',
         remote: 'https://github.com/BredaUniversityGames/JenkinsLib'])
 
 stages {
-    vcs.perforce()
-    build.ue5()
-    // test.ue5()
-    // deploy.steam()
-    // deploy.itch()
-    notify.discord()
+    perforce.sync()
+    ue5.build()
+    // ue5.test()
+    // steam.deploy()
+    // itch.deploy()
+    discord.notify()
 }
 ```
 
@@ -35,10 +35,10 @@ See the **[Wiki](../../wiki)** for full documentation:
 
 | Category | Stages |
 | --- | --- |
-| Version Control | [vcs.perforce()](../../wiki/stages/vcs/Perforce), [vcs.git()](../../wiki/stages/vcs/Git) |
-| Build | [build.ue5()](../../wiki/stages/build/Build-UE5), [build.vs()](../../wiki/stages/build/Build-VS) |
-| Testing | [test.ue5()](../../wiki/stages/test/Test-UE5), [test.vs()](../../wiki/stages/test/Test-VS) |
-| Deployment | [deploy.steam()](../../wiki/stages/deploy/Steam), [deploy.itch()](../../wiki/stages/deploy/Itch), [deploy.gdrive()](../../wiki/stages/deploy/GDrive), [deploy.epic()](../../wiki/stages/deploy/Epic) |
-| Code Review | [review.swarm()](../../wiki/stages/review/Swarm) |
-| Debug Symbols | [symbols.sentry()](../../wiki/stages/symbols/Sentry) |
-| Notifications | [notify.discord()](../../wiki/stages/notify/Discord) |
+| Version Control | [perforce.sync()](../../wiki/stages/vcs/Perforce), [git.sync()](../../wiki/stages/vcs/Git) |
+| Build | [ue5.build()](../../wiki/stages/build/Build-UE5), [vs.build()](../../wiki/stages/build/Build-VS) |
+| Testing | [ue5.test()](../../wiki/stages/test/Test-UE5), [vs.test()](../../wiki/stages/test/Test-VS) |
+| Deployment | [steam.deploy()](../../wiki/stages/deploy/Steam), [itch.deploy()](../../wiki/stages/deploy/Itch), [gdrive.deploy()](../../wiki/stages/deploy/GDrive), [epic.deploy()](../../wiki/stages/deploy/Epic) |
+| Code Review | [swarm.review()](../../wiki/stages/review/Swarm) |
+| Debug Symbols | [sentry.upload()](../../wiki/stages/symbols/Sentry) |
+| Notifications | [discord.notify()](../../wiki/stages/notify/Discord) |

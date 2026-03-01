@@ -1,13 +1,29 @@
 /**
- * Test modules.
- * Usage: test.ue5(), test.vs()
+ * Unreal Engine 5 module.
+ * Usage: ue5.build(), ue5.test()
  *
- * Thin wrappers that delegate to build module test methods and testRunner.
+ * Direct-use methods are available after registration:
+ * ue5.runTests(), ue5.getTestResults(), ue5.getJUnitXMLFromJSON(), ue5.fixupRedirects()
  */
 
+import groovy.transform.Field
 import com.buas.ModuleRegistry
+import com.buas.build.UE5
 
-def ue5(Map overrides = [:]) {
+@Field def _impl = null
+
+def build(Map overrides = [:]) {
+    _impl = new UE5(this)
+    ModuleRegistry.register(
+        category: 'build',
+        name: 'Build',
+        params: _impl.pipelineParams(overrides),
+        execute: { params, ctx -> _impl.execute(params, ctx) },
+        hasCleanup: false
+    )
+}
+
+def test(Map overrides = [:]) {
     def testParams = [
         choice(name: 'UE5_TEST_MODE',
                choices: overrides.UE5_TEST_MODE_CHOICES ?: ['RunAll', 'RunNamed', 'RunFiltered'],
@@ -24,7 +40,7 @@ def ue5(Map overrides = [:]) {
         name: 'Test',
         params: testParams,
         execute: { params, ctx ->
-            build.runTests(
+            _impl.runTests(
                 engineRoot: ctx.engineRoot ?: params.UE5_ENGINE_ROOT,
                 project:    ctx.projectPath ?: params.UE5_PROJECT_PATH,
                 mode:       params.UE5_TEST_MODE,
@@ -34,8 +50,8 @@ def ue5(Map overrides = [:]) {
                 platform:   ctx.buildPlatform ?: params.BUILD_PLATFORM
             )
 
-            def testJson = build.getTestResults()
-            def junitXml = build.getJUnitXMLFromJSON(testJson)
+            def testJson = _impl.getTestResults()
+            def junitXml = _impl.getJUnitXMLFromJSON(testJson)
             writeFile file: 'Logs/UnitTestsReport/junit.xml', text: junitXml
             junit testResults: 'Logs/UnitTestsReport/junit.xml', allowEmptyResults: true
 
@@ -45,26 +61,8 @@ def ue5(Map overrides = [:]) {
     )
 }
 
-def vs(Map overrides = [:]) {
-    def testParams = [
-        choice(name: 'VS_TEST_FRAMEWORK',
-               choices: overrides.VS_TEST_FRAMEWORK_CHOICES ?: ['CTest', 'GoogleTest'],
-               description: 'VS test framework to use'),
-        string(name: 'VS_TEST_EXECUTABLE', defaultValue: overrides.VS_TEST_EXECUTABLE ?: '',
-               description: 'Path to test executable (GoogleTest) or CTest build dir')
-    ]
-
-    ModuleRegistry.register(
-        category: 'test',
-        name: 'Test',
-        params: testParams,
-        execute: { params, ctx ->
-            testRunner.run(
-                framework:  params.VS_TEST_FRAMEWORK,
-                executable: params.VS_TEST_EXECUTABLE,
-                config:     ctx.buildConfig ?: params.VS_CONFIG
-            )
-        },
-        hasCleanup: false
-    )
-}
+// Direct-use methods
+def runTests(Map config) { _impl.runTests(config) }
+def getTestResults() { return _impl.getTestResults() }
+def getJUnitXMLFromJSON(String jsonContent) { return _impl.getJUnitXMLFromJSON(jsonContent) }
+def fixupRedirects(Map config) { _impl.fixupRedirects(config) }

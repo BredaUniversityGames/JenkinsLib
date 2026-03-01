@@ -14,29 +14,29 @@ library identifier: 'JenkinsLib@main',
 
 stages {
     // ── Version Control (pick one) ──
-    vcs.perforce()
-    // vcs.git()
+    perforce.sync()
+    // git.sync()
 
     // ── Build Engine (pick one) ──
-    build.ue5()
-    // build.vs()
+    ue5.build()
+    // vs.build()
 
     // ── Testing (pick one, must match build engine) ──
-    // test.ue5()
-    // test.vs()
+    // ue5.test()
+    // vs.test()
 
     // ── Code Review ──
-    // review.swarm()
+    // swarm.review()
 
     // ── Deployment (enable any combination) ──
-    // deploy.steam()
-    // deploy.itch()
-    // deploy.gdrive()
-    // deploy.epic()
+    // steam.deploy()
+    // itch.deploy()
+    // gdrive.deploy()
+    // epic.deploy()
 
     // ── Debug Symbols ──
-    // symbols.sentry()
+    // sentry.upload()
 
     // ── Notifications ──
-    notify.discord()
+    discord.notify()
 }

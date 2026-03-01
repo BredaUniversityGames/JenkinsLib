@@ -8,21 +8,21 @@
  *           remote: 'https://github.com/BredaUniversityGames/JenkinsLib'])
  *
  *   stages {
- *       vcs.perforce()
- *       build.ue5()
- *       // test.ue5()
- *       deploy.steam()
- *       notify.discord()
+ *       perforce.sync()
+ *       ue5.build()
+ *       // ue5.test()
+ *       steam.deploy()
+ *       discord.notify()
  *   }
  *
  * Comment/uncomment modules to add/remove both their stages AND parameters.
  * Each module can accept overrides for default parameter values:
  *
  *   stages {
- *       vcs.perforce(P4_HOST: 'ssl:custom.host:1666')
- *       build.ue5(BUILD_CONFIG: 'Shipping')
- *       deploy.steam()
- *       notify.discord()
+ *       perforce.sync(P4_HOST: 'ssl:custom.host:1666')
+ *       ue5.build(BUILD_CONFIG: 'Shipping')
+ *       steam.deploy()
+ *       discord.notify()
  *   }
  */
 
