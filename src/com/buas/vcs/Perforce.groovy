@@ -20,7 +20,7 @@ class Perforce implements Serializable {
             steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: prev.P4_WORKSPACE ?: "jenkins-${steps.env.JOB_NAME.replace('/', '-')}",
                    description: 'Perforce workspace name (used as template if P4_VIEW is empty)'),
             steps.string(name: 'P4_VIEW', defaultValue: overrides.P4_VIEW ?: prev.P4_VIEW ?: '',
-                   description: 'Workspace view mapping (e.g. //depot/project/... //${P4_WORKSPACE}/...) — if set, overrides P4_WORKSPACE template'),
+                   description: 'Workspace view mapping (e.g. //depot/project/... //${P4_WORKSPACE}/...) — if set, overrides the view in the P4_WORKSPACE template'),
             steps.booleanParam(name: 'P4_FORCE_CLEAN', defaultValue: overrides.P4_FORCE_CLEAN ?: prev.P4_FORCE_CLEAN ?: false,
                          description: 'Force clean Perforce sync')
         ]
