@@ -23,9 +23,7 @@ class UE5 implements Serializable {
                    description: 'UE5 build method'),
             engineParam,
             steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
-                   description: 'Absolute path to .uproject file'),
-            steps.string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: prev.UE5_PROJECT_NAME ?: '',
-                   description: 'Project name (without extension)'),
+                   description: 'Relative path to .uproject file (from workspace root)'),
             steps.string(name: 'UE5_CUSTOM_FLAGS',
                    defaultValue: overrides.UE5_CUSTOM_FLAGS ?: prev.UE5_CUSTOM_FLAGS ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package',
                    description: 'Custom RunUAT flags (only for Custom build method)'),
@@ -106,10 +104,11 @@ class UE5 implements Serializable {
 
     def execute(Map params, Map ctx) {
         def engineRoot = resolveEnginePath(params)
+        def projectPath = "${steps.env.WORKSPACE}\\${params.UE5_PROJECT_PATH}"
 
         if (params.UE5_MATCH_BUILD_ID) {
-            def projectDir = params.UE5_PROJECT_PATH.substring(0,
-                params.UE5_PROJECT_PATH.lastIndexOf('\\'))
+            def projectDir = projectPath.substring(0,
+                projectPath.lastIndexOf('\\'))
             def script = steps.libraryResource('scripts/MatchBuildID.py')
             steps.writeFile(file: 'MatchBuildID.py', text: script)
             steps.utilPython.runScript(
@@ -120,8 +119,7 @@ class UE5 implements Serializable {
 
         build(
             engineRoot:  engineRoot,
-            projectName: params.UE5_PROJECT_NAME,
-            project:     params.UE5_PROJECT_PATH,
+            project:     projectPath,
             config:      params.UE5_BUILD_CONFIG,
             platform:    params.UE5_BUILD_PLATFORM,
             outputDir:   ctx.outputDir,
@@ -132,13 +130,12 @@ class UE5 implements Serializable {
         ctx.buildConfig = params.UE5_BUILD_CONFIG
         ctx.buildPlatform = params.UE5_BUILD_PLATFORM
         ctx.engineRoot = engineRoot
-        ctx.projectPath = params.UE5_PROJECT_PATH
+        ctx.projectPath = projectPath
         ctx.buildEngine = 'UE5'
     }
 
     def build(Map config) {
         def engineRoot = config.engineRoot
-        def projectName = config.projectName
         def project = config.project
         def buildConfig = config.config ?: 'Development'
         def platform = config.platform ?: 'Win64'
