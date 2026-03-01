@@ -29,13 +29,13 @@ class UE5 implements Serializable {
             steps.string(name: 'UE5_CUSTOM_FLAGS',
                    defaultValue: overrides.UE5_CUSTOM_FLAGS ?: prev.UE5_CUSTOM_FLAGS ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package',
                    description: 'Custom RunUAT flags (only for Custom build method)'),
-            steps.choice(name: 'BUILD_CONFIG',
-                   choices: reorderChoices(overrides.BUILD_CONFIG_CHOICES ?: ['Development', 'Shipping', 'DebugGame', 'Debug', 'Test'], prev.BUILD_CONFIG),
+            steps.choice(name: 'UE5_BUILD_CONFIG',
+                   choices: reorderChoices(overrides.UE5_BUILD_CONFIG_CHOICES ?: ['Development', 'Shipping', 'DebugGame', 'Debug', 'Test'], prev.UE5_BUILD_CONFIG),
                    description: 'Build configuration'),
-            steps.choice(name: 'BUILD_PLATFORM',
-                   choices: reorderChoices(overrides.BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'], prev.BUILD_PLATFORM),
+            steps.choice(name: 'UE5_BUILD_PLATFORM',
+                   choices: reorderChoices(overrides.UE5_BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'], prev.UE5_BUILD_PLATFORM),
                    description: 'Target platform'),
-            steps.booleanParam(name: 'MATCH_BUILD_ID', defaultValue: overrides.MATCH_BUILD_ID ?: prev.MATCH_BUILD_ID ?: false,
+            steps.booleanParam(name: 'UE5_MATCH_BUILD_ID', defaultValue: overrides.UE5_MATCH_BUILD_ID ?: prev.UE5_MATCH_BUILD_ID ?: false,
                          description: 'Run MatchBuildID.py before build (for precompiled engines with plugins)')
         ]
     }
@@ -107,7 +107,7 @@ class UE5 implements Serializable {
     def execute(Map params, Map ctx) {
         def engineRoot = resolveEnginePath(params)
 
-        if (params.MATCH_BUILD_ID) {
+        if (params.UE5_MATCH_BUILD_ID) {
             def projectDir = params.UE5_PROJECT_PATH.substring(0,
                 params.UE5_PROJECT_PATH.lastIndexOf('\\'))
             steps.utilPython.runScript(
@@ -120,15 +120,15 @@ class UE5 implements Serializable {
             engineRoot:  engineRoot,
             projectName: params.UE5_PROJECT_NAME,
             project:     params.UE5_PROJECT_PATH,
-            config:      params.BUILD_CONFIG,
-            platform:    params.BUILD_PLATFORM,
+            config:      params.UE5_BUILD_CONFIG,
+            platform:    params.UE5_BUILD_PLATFORM,
             outputDir:   ctx.outputDir,
             method:      params.UE5_BUILD_METHOD,
             customFlags: params.UE5_CUSTOM_FLAGS
         )
 
-        ctx.buildConfig = params.BUILD_CONFIG
-        ctx.buildPlatform = params.BUILD_PLATFORM
+        ctx.buildConfig = params.UE5_BUILD_CONFIG
+        ctx.buildPlatform = params.UE5_BUILD_PLATFORM
         ctx.engineRoot = engineRoot
         ctx.projectPath = params.UE5_PROJECT_PATH
         ctx.buildEngine = 'UE5'

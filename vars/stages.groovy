@@ -20,7 +20,7 @@
  *
  *   stages {
  *       perforce.sync(P4_HOST: 'ssl:custom.host:1666')
- *       ue5.build(BUILD_CONFIG: 'Shipping')
+ *       ue5.build(UE5_BUILD_CONFIG: 'Shipping')
  *       steam.deploy()
  *       discord.notify()
  *   }

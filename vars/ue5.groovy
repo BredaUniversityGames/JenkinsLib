@@ -46,8 +46,8 @@ def test(Map overrides = [:]) {
                 mode:       params.UE5_TEST_MODE,
                 testNames:  params.UE5_TEST_NAMES,
                 testFilter: params.UE5_TEST_FILTER,
-                config:     ctx.buildConfig ?: params.BUILD_CONFIG,
-                platform:   ctx.buildPlatform ?: params.BUILD_PLATFORM
+                config:     ctx.buildConfig ?: params.UE5_BUILD_CONFIG,
+                platform:   ctx.buildPlatform ?: params.UE5_BUILD_PLATFORM
             )
 
             def testJson = _impl.getTestResults()
