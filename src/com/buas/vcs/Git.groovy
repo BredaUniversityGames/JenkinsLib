@@ -18,8 +18,9 @@ class Git implements Serializable {
                    description: 'Git repository URL'),
             steps.string(name: 'GIT_BRANCH', defaultValue: overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main',
                    description: 'Git branch to build'),
-            steps.string(name: 'GIT_CREDENTIALS_ID', defaultValue: overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: '',
-                   description: 'Jenkins credentials ID for Git auth (leave empty for public repos)')
+            steps.credentials(name: 'GIT_CREDENTIALS_ID', defaultValue: overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: '',
+                   description: 'Git credential (leave empty for public repos)',
+                   credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials', required: false)
         ]
     }
 

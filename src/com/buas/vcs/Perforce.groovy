@@ -13,8 +13,9 @@ class Perforce implements Serializable {
     def pipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'P4_CREDENTIAL', defaultValue: overrides.P4_CREDENTIAL ?: prev.P4_CREDENTIAL ?: '',
-                   description: 'Jenkins credentials ID for Perforce'),
+            steps.credentials(name: 'P4_CREDENTIAL', defaultValue: overrides.P4_CREDENTIAL ?: prev.P4_CREDENTIAL ?: '',
+                   description: 'Perforce credential (password or ticket)',
+                   credentialType: 'org.jenkinsci.plugins.p4.credentials.P4BaseCredentials', required: true),
             steps.string(name: 'P4_HOST', defaultValue: overrides.P4_HOST ?: prev.P4_HOST ?: 'ssl:perforce.buas.nl:1666',
                    description: 'Perforce server host'),
             steps.string(name: 'P4_WORKSPACE', defaultValue: overrides.P4_WORKSPACE ?: prev.P4_WORKSPACE ?: "jenkins-${steps.env.JOB_NAME.replace('/', '-')}",
