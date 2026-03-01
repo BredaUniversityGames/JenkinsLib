@@ -46,9 +46,12 @@ class GDrive implements Serializable {
 
         steps.utilZip.pack(sourceDir, archiveName, false)
 
+        def script = steps.libraryResource('scripts/GoogleDriveUpload.py')
+        steps.writeFile(file: 'GoogleDriveUpload.py', text: script)
+
         steps.withCredentials([steps.file(credentialsId: credentialsId, variable: 'GDRIVE_SECRET')]) {
             steps.utilPython.runScript(
-                "${steps.env.WORKSPACE}\\JenkinsLib\\scripts\\GoogleDriveUpload.py",
+                "${steps.env.WORKSPACE}\\GoogleDriveUpload.py",
                 "%GDRIVE_SECRET% \"${steps.env.WORKSPACE}\\${archiveName}.zip\" \"${archiveName}.zip\" \"${folderId}\" ${chunkMultiplier}"
             )
         }

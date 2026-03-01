@@ -16,13 +16,12 @@ class UE5 implements Serializable {
 
     def pipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
+        def engineParam = engineVersionParam(overrides, prev)
         return [
             steps.choice(name: 'UE5_BUILD_METHOD',
                    choices: reorderChoices(overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'], prev.UE5_BUILD_METHOD),
                    description: 'UE5 build method'),
-            steps.string(name: 'UE5_ENGINE_VERSION',
-                   defaultValue: overrides.UE5_ENGINE_VERSION ?: prev.UE5_ENGINE_VERSION ?: '',
-                   description: 'UE5 engine version (e.g. 5.3). Must match a folder in UE5_ENGINE_ROOT on the build agent.'),
+            engineParam,
             steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
                    description: 'Absolute path to .uproject file'),
             steps.string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: prev.UE5_PROJECT_NAME ?: '',
@@ -39,6 +38,38 @@ class UE5 implements Serializable {
             steps.booleanParam(name: 'UE5_MATCH_BUILD_ID', defaultValue: overrides.UE5_MATCH_BUILD_ID ?: prev.UE5_MATCH_BUILD_ID ?: false,
                          description: 'Run MatchBuildID.py before build (for precompiled engines with plugins)')
         ]
+    }
+
+    private def engineVersionParam(Map overrides, Map prev) {
+        def engineRoot = steps.env.UE5_ENGINE_ROOT
+        if (engineRoot) {
+            def versions = detectEngines(engineRoot)
+            if (versions) {
+                return steps.choice(name: 'UE5_ENGINE_VERSION',
+                       choices: reorderChoices(versions, prev.UE5_ENGINE_VERSION),
+                       description: "Detected UE5 versions in ${engineRoot}")
+            }
+        }
+        return steps.string(name: 'UE5_ENGINE_VERSION',
+               defaultValue: overrides.UE5_ENGINE_VERSION ?: prev.UE5_ENGINE_VERSION ?: '',
+               description: 'UE5 engine version (e.g. 5.3). Set UE5_ENGINE_ROOT env var on the node.')
+    }
+
+    @NonCPS
+    private static List detectEngines(String engineRoot) {
+        def root = new File(engineRoot)
+        if (!root.isDirectory()) { return [] }
+        return root.listFiles()
+            .findAll { dir ->
+                dir.isDirectory() &&
+                new File(dir, 'Engine\\Build\\BatchFiles\\RunUAT.bat').exists()
+            }
+            .collect { dir ->
+                def m = (dir.name =~ /^UE_?(.+)$/)
+                m.matches() ? m[0][1] : dir.name
+            }
+            .sort()
+            .reverse()
     }
 
     private String resolveEnginePath(Map params) {
@@ -79,8 +110,10 @@ class UE5 implements Serializable {
         if (params.UE5_MATCH_BUILD_ID) {
             def projectDir = params.UE5_PROJECT_PATH.substring(0,
                 params.UE5_PROJECT_PATH.lastIndexOf('\\'))
+            def script = steps.libraryResource('scripts/MatchBuildID.py')
+            steps.writeFile(file: 'MatchBuildID.py', text: script)
             steps.utilPython.runScript(
-                "${steps.env.WORKSPACE}\\JenkinsLib\\scripts\\MatchBuildID.py",
+                "${steps.env.WORKSPACE}\\MatchBuildID.py",
                 "\"${projectDir}\" \"${engineRoot}\" \"false\""
             )
         }
