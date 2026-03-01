@@ -118,12 +118,17 @@ class Perforce implements Serializable {
         def workspace = config.workspace
         def view = config.view
         def shelfId = config.shelfId
+        def hasView = view?.trim()
+
+        def wsSpec = hasView
+            ? steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
+                  spec: steps.clientSpec(allwrite: false, backup: true, changeView: '', clobber: true, compress: false,
+                                   line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
+                                   streamName: '', type: 'WRITABLE', view: view))
+            : steps.staticSpec(charset: 'none', name: workspace, pinHost: false)
 
         steps.p4unshelve credential: credential, ignoreEmpty: false, resolve: 'none', shelf: shelfId, tidy: false,
-                   workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
-                              spec: steps.clientSpec(allwrite: false, backup: true, changeView: '', clobber: true, compress: false,
-                                               line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
-                                               streamName: '', type: 'WRITABLE', view: view))
+                   workspace: wsSpec
     }
 
     def getChangelistDescription(Map config) {
@@ -131,12 +136,16 @@ class Perforce implements Serializable {
         def workspace = config.workspace
         def view = config.view
         def changelistId = config.changelistId
+        def hasView = view?.trim()
 
-        def p4s = steps.p4(credential: credential,
-                     workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
-                                spec: steps.clientSpec(allwrite: true, backup: true, changeView: '', clobber: false, compress: false,
-                                                 line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
-                                                 streamName: '', type: 'WRITABLE', view: view)))
+        def wsSpec = hasView
+            ? steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
+                  spec: steps.clientSpec(allwrite: true, backup: true, changeView: '', clobber: false, compress: false,
+                                   line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
+                                   streamName: '', type: 'WRITABLE', view: view))
+            : steps.staticSpec(charset: 'none', name: workspace, pinHost: false)
+
+        def p4s = steps.p4(credential: credential, workspace: wsSpec)
         def changeList = p4s.run('describe', '-s', '-S', "${changelistId}")
         def desc = ""
 
@@ -165,12 +174,16 @@ class Perforce implements Serializable {
         def credential = config.credential
         def workspace = config.workspace
         def view = config.view
+        def hasView = view?.trim()
 
-        def p4s = steps.p4(credential: credential,
-                     workspace: steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
-                                spec: steps.clientSpec(allwrite: true, backup: true, changeView: '', clobber: false, compress: false,
-                                                 line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
-                                                 streamName: '', type: 'WRITABLE', view: view)))
+        def wsSpec = hasView
+            ? steps.manualSpec(charset: 'none', cleanup: false, name: workspace, pinHost: false,
+                  spec: steps.clientSpec(allwrite: true, backup: true, changeView: '', clobber: false, compress: false,
+                                   line: 'LOCAL', locked: false, modtime: false, rmdir: false, serverID: '',
+                                   streamName: '', type: 'WRITABLE', view: view))
+            : steps.staticSpec(charset: 'none', name: workspace, pinHost: false)
+
+        def p4s = steps.p4(credential: credential, workspace: wsSpec)
         p4s.run('revert', '-c', 'default', '//...')
     }
 
