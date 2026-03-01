@@ -34,7 +34,8 @@ def call(Closure body) {
 
     // Collect parameters from all registered modules
     def allParams = [
-        booleanParam(name: 'CLEAN_WORKSPACE', defaultValue: true,
+        booleanParam(name: 'CLEAN_WORKSPACE',
+                     defaultValue: params?.CLEAN_WORKSPACE != null ? params.CLEAN_WORKSPACE : true,
                      description: 'Clean workspace after build')
     ]
     modules.each { mod ->

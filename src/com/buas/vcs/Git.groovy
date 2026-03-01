@@ -12,12 +12,13 @@ class Git implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'GIT_REPO_URL', defaultValue: overrides.GIT_REPO_URL ?: '',
+            steps.string(name: 'GIT_REPO_URL', defaultValue: overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: '',
                    description: 'Git repository URL'),
-            steps.string(name: 'GIT_BRANCH', defaultValue: overrides.GIT_BRANCH ?: 'main',
+            steps.string(name: 'GIT_BRANCH', defaultValue: overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main',
                    description: 'Git branch to build'),
-            steps.string(name: 'GIT_CREDENTIALS_ID', defaultValue: overrides.GIT_CREDENTIALS_ID ?: '',
+            steps.string(name: 'GIT_CREDENTIALS_ID', defaultValue: overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: '',
                    description: 'Jenkins credentials ID for Git auth (leave empty for public repos)')
         ]
     }

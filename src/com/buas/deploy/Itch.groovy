@@ -12,12 +12,13 @@ class Itch implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'ITCH_BUTLER_PATH', defaultValue: overrides.ITCH_BUTLER_PATH ?: '',
+            steps.string(name: 'ITCH_BUTLER_PATH', defaultValue: overrides.ITCH_BUTLER_PATH ?: prev.ITCH_BUTLER_PATH ?: '',
                    description: 'Path to Butler executable'),
-            steps.string(name: 'ITCH_CREDENTIALS_ID', defaultValue: overrides.ITCH_CREDENTIALS_ID ?: '',
+            steps.string(name: 'ITCH_CREDENTIALS_ID', defaultValue: overrides.ITCH_CREDENTIALS_ID ?: prev.ITCH_CREDENTIALS_ID ?: '',
                    description: 'Jenkins credential ID for Butler API key'),
-            steps.string(name: 'ITCH_TARGET', defaultValue: overrides.ITCH_TARGET ?: '',
+            steps.string(name: 'ITCH_TARGET', defaultValue: overrides.ITCH_TARGET ?: prev.ITCH_TARGET ?: '',
                    description: 'itch.io target (user/game:channel)')
         ]
     }

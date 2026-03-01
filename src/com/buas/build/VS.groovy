@@ -11,14 +11,15 @@ class VS implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'VS_MSBUILD_PATH', defaultValue: overrides.VS_MSBUILD_PATH ?: '',
+            steps.string(name: 'VS_MSBUILD_PATH', defaultValue: overrides.VS_MSBUILD_PATH ?: prev.VS_MSBUILD_PATH ?: '',
                    description: 'Path to MSBuild.exe'),
-            steps.string(name: 'VS_PROJECT_PATH', defaultValue: overrides.VS_PROJECT_PATH ?: '',
+            steps.string(name: 'VS_PROJECT_PATH', defaultValue: overrides.VS_PROJECT_PATH ?: prev.VS_PROJECT_PATH ?: '',
                    description: 'Path to .sln or .vcxproj file'),
-            steps.string(name: 'VS_CONFIG', defaultValue: overrides.VS_CONFIG ?: 'Debug',
+            steps.string(name: 'VS_CONFIG', defaultValue: overrides.VS_CONFIG ?: prev.VS_CONFIG ?: 'Debug',
                    description: 'VS build configuration'),
-            steps.string(name: 'VS_PLATFORM', defaultValue: overrides.VS_PLATFORM ?: 'x64',
+            steps.string(name: 'VS_PLATFORM', defaultValue: overrides.VS_PLATFORM ?: prev.VS_PLATFORM ?: 'x64',
                    description: 'VS target platform')
         ]
     }

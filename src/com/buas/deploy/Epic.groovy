@@ -11,18 +11,19 @@ class Epic implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'EPIC_BPT_PATH', defaultValue: overrides.EPIC_BPT_PATH ?: '',
+            steps.string(name: 'EPIC_BPT_PATH', defaultValue: overrides.EPIC_BPT_PATH ?: prev.EPIC_BPT_PATH ?: '',
                    description: 'Path to BuildPatchTool.exe'),
-            steps.string(name: 'EPIC_ORG_ID', defaultValue: overrides.EPIC_ORG_ID ?: '',
+            steps.string(name: 'EPIC_ORG_ID', defaultValue: overrides.EPIC_ORG_ID ?: prev.EPIC_ORG_ID ?: '',
                    description: 'Epic organization ID'),
-            steps.string(name: 'EPIC_PRODUCT_ID', defaultValue: overrides.EPIC_PRODUCT_ID ?: '',
+            steps.string(name: 'EPIC_PRODUCT_ID', defaultValue: overrides.EPIC_PRODUCT_ID ?: prev.EPIC_PRODUCT_ID ?: '',
                    description: 'Epic product ID'),
-            steps.string(name: 'EPIC_ARTIFACT_ID', defaultValue: overrides.EPIC_ARTIFACT_ID ?: '',
+            steps.string(name: 'EPIC_ARTIFACT_ID', defaultValue: overrides.EPIC_ARTIFACT_ID ?: prev.EPIC_ARTIFACT_ID ?: '',
                    description: 'Epic artifact ID'),
-            steps.string(name: 'EPIC_CLIENT_ID', defaultValue: overrides.EPIC_CLIENT_ID ?: '',
+            steps.string(name: 'EPIC_CLIENT_ID', defaultValue: overrides.EPIC_CLIENT_ID ?: prev.EPIC_CLIENT_ID ?: '',
                    description: 'Epic client ID'),
-            steps.string(name: 'EPIC_CLIENT_SECRET_ID', defaultValue: overrides.EPIC_CLIENT_SECRET_ID ?: '',
+            steps.string(name: 'EPIC_CLIENT_SECRET_ID', defaultValue: overrides.EPIC_CLIENT_SECRET_ID ?: prev.EPIC_CLIENT_SECRET_ID ?: '',
                    description: 'Jenkins credential ID for Epic client secret')
         ]
     }

@@ -12,14 +12,15 @@ class Sentry implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'SENTRY_CLI_PATH', defaultValue: overrides.SENTRY_CLI_PATH ?: '',
+            steps.string(name: 'SENTRY_CLI_PATH', defaultValue: overrides.SENTRY_CLI_PATH ?: prev.SENTRY_CLI_PATH ?: '',
                    description: 'Path to sentry-cli.exe'),
-            steps.string(name: 'SENTRY_AUTH_TOKEN_ID', defaultValue: overrides.SENTRY_AUTH_TOKEN_ID ?: '',
+            steps.string(name: 'SENTRY_AUTH_TOKEN_ID', defaultValue: overrides.SENTRY_AUTH_TOKEN_ID ?: prev.SENTRY_AUTH_TOKEN_ID ?: '',
                    description: 'Jenkins credential ID for Sentry auth token'),
-            steps.string(name: 'SENTRY_ORG', defaultValue: overrides.SENTRY_ORG ?: '',
+            steps.string(name: 'SENTRY_ORG', defaultValue: overrides.SENTRY_ORG ?: prev.SENTRY_ORG ?: '',
                    description: 'Sentry organization slug'),
-            steps.string(name: 'SENTRY_PROJECT', defaultValue: overrides.SENTRY_PROJECT ?: '',
+            steps.string(name: 'SENTRY_PROJECT', defaultValue: overrides.SENTRY_PROJECT ?: prev.SENTRY_PROJECT ?: '',
                    description: 'Sentry project slug')
         ]
     }

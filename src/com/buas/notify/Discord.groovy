@@ -15,8 +15,9 @@ class Discord implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'DISCORD_WEBHOOK', defaultValue: overrides.DISCORD_WEBHOOK ?: '',
+            steps.string(name: 'DISCORD_WEBHOOK', defaultValue: overrides.DISCORD_WEBHOOK ?: prev.DISCORD_WEBHOOK ?: '',
                    description: 'Discord webhook URL')
         ]
     }

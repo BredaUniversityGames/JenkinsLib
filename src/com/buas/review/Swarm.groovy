@@ -13,10 +13,11 @@ class Swarm implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'SWARM_URL', defaultValue: overrides.SWARM_URL ?: '',
+            steps.string(name: 'SWARM_URL', defaultValue: overrides.SWARM_URL ?: prev.SWARM_URL ?: '',
                    description: 'Swarm server URL'),
-            steps.string(name: 'SWARM_USER', defaultValue: overrides.SWARM_USER ?: '',
+            steps.string(name: 'SWARM_USER', defaultValue: overrides.SWARM_USER ?: prev.SWARM_USER ?: '',
                    description: 'Swarm user ID')
         ]
     }

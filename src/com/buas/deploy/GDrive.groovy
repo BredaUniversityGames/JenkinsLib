@@ -12,12 +12,13 @@ class GDrive implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'GDRIVE_CREDENTIALS_ID', defaultValue: overrides.GDRIVE_CREDENTIALS_ID ?: '',
+            steps.string(name: 'GDRIVE_CREDENTIALS_ID', defaultValue: overrides.GDRIVE_CREDENTIALS_ID ?: prev.GDRIVE_CREDENTIALS_ID ?: '',
                    description: 'Jenkins credential ID for GDrive service account file'),
-            steps.string(name: 'GDRIVE_FOLDER_ID', defaultValue: overrides.GDRIVE_FOLDER_ID ?: '',
+            steps.string(name: 'GDRIVE_FOLDER_ID', defaultValue: overrides.GDRIVE_FOLDER_ID ?: prev.GDRIVE_FOLDER_ID ?: '',
                    description: 'Google Drive parent folder ID'),
-            steps.string(name: 'GDRIVE_CHUNK_MULTIPLIER', defaultValue: overrides.GDRIVE_CHUNK_MULTIPLIER ?: '16',
+            steps.string(name: 'GDRIVE_CHUNK_MULTIPLIER', defaultValue: overrides.GDRIVE_CHUNK_MULTIPLIER ?: prev.GDRIVE_CHUNK_MULTIPLIER ?: '16',
                    description: 'Upload chunk size multiplier (higher = faster but more memory)')
         ]
     }

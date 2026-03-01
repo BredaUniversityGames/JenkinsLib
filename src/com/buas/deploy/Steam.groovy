@@ -12,16 +12,17 @@ class Steam implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'STEAM_CREDENTIAL', defaultValue: overrides.STEAM_CREDENTIAL ?: '',
+            steps.string(name: 'STEAM_CREDENTIAL', defaultValue: overrides.STEAM_CREDENTIAL ?: prev.STEAM_CREDENTIAL ?: '',
                    description: 'Jenkins credential ID for Steam (username/password)'),
-            steps.string(name: 'STEAM_CMD_PATH', defaultValue: overrides.STEAM_CMD_PATH ?: '',
+            steps.string(name: 'STEAM_CMD_PATH', defaultValue: overrides.STEAM_CMD_PATH ?: prev.STEAM_CMD_PATH ?: '',
                    description: 'Path to steamcmd.exe'),
-            steps.string(name: 'STEAM_APP_ID', defaultValue: overrides.STEAM_APP_ID ?: '',
+            steps.string(name: 'STEAM_APP_ID', defaultValue: overrides.STEAM_APP_ID ?: prev.STEAM_APP_ID ?: '',
                    description: 'Steam App ID'),
-            steps.string(name: 'STEAM_DEPOT_ID', defaultValue: overrides.STEAM_DEPOT_ID ?: '',
+            steps.string(name: 'STEAM_DEPOT_ID', defaultValue: overrides.STEAM_DEPOT_ID ?: prev.STEAM_DEPOT_ID ?: '',
                    description: 'Steam Depot ID'),
-            steps.string(name: 'STEAM_BRANCH', defaultValue: overrides.STEAM_BRANCH ?: '',
+            steps.string(name: 'STEAM_BRANCH', defaultValue: overrides.STEAM_BRANCH ?: prev.STEAM_BRANCH ?: '',
                    description: 'Steam branch to set live (leave empty for none)')
         ]
     }

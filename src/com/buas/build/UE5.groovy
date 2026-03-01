@@ -15,28 +15,36 @@ class UE5 implements Serializable {
     }
 
     def pipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         return [
             steps.choice(name: 'UE5_BUILD_METHOD',
-                   choices: overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'],
+                   choices: reorderChoices(overrides.UE5_BUILD_METHOD_CHOICES ?: ['Blueprint', 'Precompiled', 'Custom'], prev.UE5_BUILD_METHOD),
                    description: 'UE5 build method'),
-            steps.string(name: 'UE5_ENGINE_ROOT', defaultValue: overrides.UE5_ENGINE_ROOT ?: '',
+            steps.string(name: 'UE5_ENGINE_ROOT', defaultValue: overrides.UE5_ENGINE_ROOT ?: prev.UE5_ENGINE_ROOT ?: '',
                    description: 'Path to UE5 engine root (e.g. C:\\UE_5.3)'),
-            steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: '',
+            steps.string(name: 'UE5_PROJECT_PATH', defaultValue: overrides.UE5_PROJECT_PATH ?: prev.UE5_PROJECT_PATH ?: '',
                    description: 'Absolute path to .uproject file'),
-            steps.string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: '',
+            steps.string(name: 'UE5_PROJECT_NAME', defaultValue: overrides.UE5_PROJECT_NAME ?: prev.UE5_PROJECT_NAME ?: '',
                    description: 'Project name (without extension)'),
             steps.string(name: 'UE5_CUSTOM_FLAGS',
-                   defaultValue: overrides.UE5_CUSTOM_FLAGS ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package',
+                   defaultValue: overrides.UE5_CUSTOM_FLAGS ?: prev.UE5_CUSTOM_FLAGS ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package',
                    description: 'Custom RunUAT flags (only for Custom build method)'),
             steps.choice(name: 'BUILD_CONFIG',
-                   choices: overrides.BUILD_CONFIG_CHOICES ?: ['Development', 'Shipping', 'DebugGame', 'Debug', 'Test'],
+                   choices: reorderChoices(overrides.BUILD_CONFIG_CHOICES ?: ['Development', 'Shipping', 'DebugGame', 'Debug', 'Test'], prev.BUILD_CONFIG),
                    description: 'Build configuration'),
             steps.choice(name: 'BUILD_PLATFORM',
-                   choices: overrides.BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'],
+                   choices: reorderChoices(overrides.BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'], prev.BUILD_PLATFORM),
                    description: 'Target platform'),
-            steps.booleanParam(name: 'MATCH_BUILD_ID', defaultValue: overrides.MATCH_BUILD_ID ?: false,
+            steps.booleanParam(name: 'MATCH_BUILD_ID', defaultValue: overrides.MATCH_BUILD_ID ?: prev.MATCH_BUILD_ID ?: false,
                          description: 'Run MatchBuildID.py before build (for precompiled engines with plugins)')
         ]
+    }
+
+    private static List reorderChoices(List choices, def current) {
+        if (current && choices.contains(current)) {
+            return [current] + (choices - current)
+        }
+        return choices
     }
 
     def execute(Map params, Map ctx) {
