@@ -109,7 +109,9 @@ class GDrive implements Serializable {
         conn.requestMethod = 'POST'
         conn.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
         conn.doOutput = true
-        conn.outputStream.withWriter('UTF-8') { it.write(body) }
+        def bodyBytes = body.getBytes('UTF-8')
+        conn.outputStream.write(bodyBytes)
+        conn.outputStream.close()
 
         if (conn.responseCode != 200) {
             def error = conn.errorStream?.text ?: 'unknown error'
@@ -117,6 +119,7 @@ class GDrive implements Serializable {
         }
 
         def response = new JsonSlurper().parseText(conn.inputStream.text)
+        conn.disconnect()
         return response.access_token
     }
 
@@ -129,7 +132,9 @@ class GDrive implements Serializable {
         conn.setRequestProperty('Authorization', "Bearer ${token}")
         conn.setRequestProperty('Content-Type', 'application/json; charset=UTF-8')
         conn.doOutput = true
-        conn.outputStream.withWriter('UTF-8') { it.write(metadata) }
+        def metadataBytes = metadata.getBytes('UTF-8')
+        conn.outputStream.write(metadataBytes)
+        conn.outputStream.close()
 
         if (conn.responseCode != 200) {
             def error = conn.errorStream?.text ?: 'unknown error'
@@ -137,6 +142,7 @@ class GDrive implements Serializable {
         }
 
         def uploadUrl = conn.getHeaderField('Location')
+        conn.disconnect()
         if (!uploadUrl) {
             steps.error("Resumable upload init did not return a Location header")
         }
@@ -167,7 +173,7 @@ class GDrive implements Serializable {
                 conn.setRequestProperty('Content-Range', "bytes ${offset}-${endByte}/${fileSize}")
                 conn.doOutput = true
                 conn.outputStream.write(buffer)
-                conn.outputStream.flush()
+                conn.outputStream.close()
 
                 def code = conn.responseCode
                 def progress = Math.round((endByte + 1) / fileSize * 1000) / 10.0

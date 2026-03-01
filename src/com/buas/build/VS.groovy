@@ -29,7 +29,8 @@ class VS implements Serializable {
             msbuildPath: params.VS_MSBUILD_PATH,
             projectPath: params.VS_PROJECT_PATH,
             config:      params.VS_CONFIG,
-            platform:    params.VS_PLATFORM
+            platform:    params.VS_PLATFORM,
+            outputDir:   ctx.outputDir
         )
         ctx.buildConfig = params.VS_CONFIG
         ctx.buildPlatform = params.VS_PLATFORM
@@ -42,8 +43,11 @@ class VS implements Serializable {
         def buildConfig = config.config ?: 'Debug'
         def platform = config.platform ?: 'x64'
         def verbosity = config.verbosity ?: 'diagnostic'
+        def outputDir = config.outputDir
+
+        def outDirFlag = outputDir ? ";OutDir=${outputDir}\\${platform}\\" : ''
 
         steps.bat(label: "Compile VS project",
-            script: "CALL \"${msbuildPath}\" \"${projectPath}\" /t:build /p:Configuration=${buildConfig};Platform=${platform};verbosity=${verbosity}")
+            script: "CALL \"${msbuildPath}\" \"${projectPath}\" /t:build /p:Configuration=${buildConfig};Platform=${platform};verbosity=${verbosity}${outDirFlag}")
     }
 }
