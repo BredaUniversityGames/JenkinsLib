@@ -52,7 +52,7 @@ class UE5 implements Serializable {
         }
         return steps.string(name: 'UE5_ENGINE_VERSION',
                defaultValue: overrides.UE5_ENGINE_VERSION ?: prev.UE5_ENGINE_VERSION ?: '',
-               description: 'UE5 engine version (e.g. 5.3). Set UE5_ENGINE_ROOT env var for auto-detection.')
+               description: 'UE5 engine version (e.g. 5.3). Set UE5_ENGINE_ROOT env var on the node.')
     }
 
     @NonCPS
