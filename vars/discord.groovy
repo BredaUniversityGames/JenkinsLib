@@ -16,7 +16,7 @@ def notify(Map overrides = [:]) {
     _impl = new Discord(this)
     ModuleRegistry.register(
         category: 'notify',
-        name: 'Discord',
+        name: 'Discord Notify',
         params: _impl.pipelineParams(overrides),
         notify: { status, params, ctx -> _impl.executeNotify(status, params, ctx) },
         hasCleanup: false

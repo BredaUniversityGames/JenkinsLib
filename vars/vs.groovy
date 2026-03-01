@@ -15,7 +15,7 @@ def build(Map overrides = [:]) {
     _impl = new VS(this)
     ModuleRegistry.register(
         category: 'build',
-        name: 'Build',
+        name: 'VS Build',
         params: _impl.pipelineParams(overrides),
         execute: { params, ctx -> _impl.execute(params, ctx) },
         hasCleanup: false
@@ -33,7 +33,7 @@ def test(Map overrides = [:]) {
 
     ModuleRegistry.register(
         category: 'test',
-        name: 'Test',
+        name: 'VS Test',
         params: testParams,
         execute: { params, ctx ->
             def framework = params.VS_TEST_FRAMEWORK

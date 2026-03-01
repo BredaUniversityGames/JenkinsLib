@@ -16,7 +16,7 @@ def sync(Map overrides = [:]) {
     _impl = new Git(this)
     ModuleRegistry.register(
         category: 'vcs',
-        name: 'Source Control',
+        name: 'Git Sync',
         params: _impl.pipelineParams(overrides),
         execute: { params, ctx -> _impl.execute(params, ctx) },
         hasCleanup: false

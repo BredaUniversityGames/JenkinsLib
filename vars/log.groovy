@@ -10,12 +10,12 @@ def debug(message)
 
 def warning(message)
 {
-   echo "Warning: ${message}"
+   echo "WARNING: ${message}"
 }
 
 def error(message)
 {
-   echo "Error: ${message}"
+   echo "ERROR: ${message}"
 }
 
 def currStage()

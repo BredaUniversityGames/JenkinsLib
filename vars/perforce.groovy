@@ -16,7 +16,7 @@ def sync(Map overrides = [:]) {
     _impl = new Perforce(this)
     ModuleRegistry.register(
         category: 'vcs',
-        name: 'Source Control',
+        name: 'P4 Sync',
         params: _impl.pipelineParams(overrides),
         execute: { params, ctx -> _impl.execute(params, ctx) },
         hasCleanup: true,

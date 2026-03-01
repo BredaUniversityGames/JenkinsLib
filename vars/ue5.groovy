@@ -16,7 +16,7 @@ def build(Map overrides = [:]) {
     _impl = new UE5(this)
     ModuleRegistry.register(
         category: 'build',
-        name: 'Build',
+        name: 'UE5 Build',
         params: _impl.pipelineParams(overrides),
         execute: { params, ctx -> _impl.execute(params, ctx) },
         hasCleanup: false
@@ -37,7 +37,7 @@ def test(Map overrides = [:]) {
 
     ModuleRegistry.register(
         category: 'test',
-        name: 'Test',
+        name: 'UE5 Test',
         params: testParams,
         execute: { params, ctx ->
             _impl.runTests(
