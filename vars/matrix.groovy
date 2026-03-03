@@ -50,17 +50,14 @@ def call(Map axes, Closure body) {
     // ── Compute all axis combinations (cartesian product) ──
     def combinations = cartesian(axes)
 
-    // ── Collect params, filtering out axis-controlled ones ──
-    // Jenkins CPS wraps parameter definitions as UninstantiatedDescribableWithInterpolation,
-    // which stores the param name inside .arguments rather than as a top-level .name property.
-    def axisNames = axes.keySet() as Set
+    // ── Collect params from inner modules (deduplicated) ──
     def seen = [] as Set
-    def filteredParams = []
+    def collectedParams = []
     innerModules.each { mod ->
         (mod.params ?: []).each { p ->
             def paramName = p.arguments?.name
-            if (paramName == null || (!axisNames.contains(paramName) && seen.add(paramName))) {
-                filteredParams.add(p)
+            if (paramName == null || seen.add(paramName)) {
+                collectedParams.add(p)
             }
         }
     }
@@ -72,7 +69,7 @@ def call(Map axes, Closure body) {
         axes:         axes,
         combinations: combinations,
         modules:      innerModules,
-        params:       filteredParams,
+        params:       collectedParams,
         hasCleanup:   innerModules.any { it.hasCleanup == true }
     )
 }
