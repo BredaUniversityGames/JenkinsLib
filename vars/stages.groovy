@@ -140,7 +140,7 @@ def call(Closure body) {
  */
 private void executeModulesByCategory(List modules, List categoryOrder, effectiveParams, Map ctx) {
     for (category in categoryOrder) {
-        def mods = modules.findAll { it.category == category }
+        def mods = modules.findAll { it.category == category && matchesCondition(it, effectiveParams) }
         if (!mods) continue
 
         if (category == 'deploy') {
@@ -166,6 +166,19 @@ private void executeModulesByCategory(List modules, List categoryOrder, effectiv
                 }
             }
         }
+    }
+}
+
+/**
+ * Check whether a module's 'when' condition (if any) matches the current params.
+ * Condition values are lists — the param value must be contained in the list.
+ */
+private boolean matchesCondition(Map mod, effectiveParams) {
+    def condition = mod.when
+    if (!condition) return true
+    return condition.every { key, allowedValues ->
+        def actual = effectiveParams[key]
+        return actual != null && allowedValues.contains(actual)
     }
 }
 

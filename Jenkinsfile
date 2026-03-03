@@ -32,9 +32,12 @@ stages {
         // swarm.review()
 
         // ── Deployment (enable any combination) ──
-        // steam.deploy()
+        // Use only() to deploy specific combinations:
+        // only(UE5_BUILD_PLATFORM: 'Win64', UE5_BUILD_CONFIG: 'Shipping') {
+        //     steam.deploy()
+        //     gdrive.deploy()
+        // }
         // itch.deploy()
-        // gdrive.deploy()
         // epic.deploy()
 
         // ── Debug Symbols ──

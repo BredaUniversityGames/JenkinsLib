@@ -37,7 +37,8 @@ class GDrive implements Serializable {
             credentialsId:   params.GDRIVE_CREDENTIALS_ID,
             source:          ctx.outputDir,
             folderId:        params.GDRIVE_FOLDER_ID,
-            platform:        ctx.buildPlatform ?: 'Win64'
+            platform:        ctx.buildPlatform ?: 'Win64',
+            config:          ctx.buildConfig ?: 'Development'
         )
     }
 
@@ -46,13 +47,14 @@ class GDrive implements Serializable {
         def source = config.source
         def folderId = config.folderId
         def platform = config.platform ?: 'Win64'
+        def buildConfig = config.config ?: 'Development'
 
         if (!credentialsId) { steps.error("GDRIVE_CREDENTIALS_ID is required") }
         if (!folderId)      { steps.error("GDRIVE_FOLDER_ID is required") }
 
         def platformDir = steps.utilWin.platformOutputDir(platform)
         def buildNum = String.format('%03d', steps.env.BUILD_NUMBER as int)
-        def archiveName = "${steps.env.JOB_BASE_NAME}_${buildNum}"
+        def archiveName = "${steps.env.JOB_BASE_NAME}_${platform}_${buildConfig}_${buildNum}"
         def sourceDir = "${source}\\${platformDir}"
 
         steps.utilZip.pack(sourceDir, archiveName, false)
