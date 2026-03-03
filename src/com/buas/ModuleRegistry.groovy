@@ -23,4 +23,28 @@ class ModuleRegistry {
         modules = []
         return result
     }
+
+    private static final Map SENTINEL = Collections.unmodifiableMap([__sentinel__: true])
+
+    /**
+     * Pushes a sentinel marker onto the registry.
+     * Call before executing a nested closure (e.g. matrix body).
+     */
+    static void push() {
+        modules += [SENTINEL]
+    }
+
+    /**
+     * Removes and returns all modules registered after the most recent sentinel.
+     * The sentinel itself is also removed.
+     */
+    static List pop() {
+        def idx = modules.lastIndexOf(SENTINEL)
+        if (idx < 0) {
+            return []
+        }
+        def inner = modules.drop(idx + 1)
+        modules = modules.take(idx)
+        return inner
+    }
 }

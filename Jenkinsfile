@@ -13,25 +13,33 @@ stages {
     perforce.sync()
     // git.sync()
 
-    // ── Build Engine (pick one) ──
-    ue5.build()
-    // vs.build()
+    // ── Matrix (optional) ──
+    // Wrap stages in a matrix() block to repeat them for every axis combination.
+    // Stages outside the matrix run once; stages inside repeat per combination.
+    // Each combination gets its own output directory under Output\<value1>\<value2>\...
+    matrix(UE5_BUILD_PLATFORM: ['Win64', 'PS4'],
+           UE5_BUILD_CONFIG: ['Development', 'Shipping']) {
 
-    // ── Testing (pick one, must match build engine) ──
-    // ue5.test()
-    // vs.test()
+        // ── Build Engine (pick one) ──
+        ue5.build()
+        // vs.build()
 
-    // ── Code Review ──
-    // swarm.review()
+        // ── Testing (pick one, must match build engine) ──
+        // ue5.test()
+        // vs.test()
 
-    // ── Deployment (enable any combination) ──
-    // steam.deploy()
-    // itch.deploy()
-    // gdrive.deploy()
-    // epic.deploy()
+        // ── Code Review ──
+        // swarm.review()
 
-    // ── Debug Symbols ──
-    // sentry.upload()
+        // ── Deployment (enable any combination) ──
+        // steam.deploy()
+        // itch.deploy()
+        // gdrive.deploy()
+        // epic.deploy()
+
+        // ── Debug Symbols ──
+        // sentry.upload()
+    }
 
     // ── Notifications ──
     discord.alert()
