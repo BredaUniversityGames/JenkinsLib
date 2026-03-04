@@ -13,12 +13,16 @@ class Git implements Serializable {
 
     def pipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
+        def repoUrl = overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: ''
+        def credId = overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: ''
+        def defaultBranch = overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main'
+        def branches = listBranches(repoUrl, credId, defaultBranch)
         return [
-            steps.string(name: 'GIT_REPO_URL', defaultValue: overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: '',
+            steps.string(name: 'GIT_REPO_URL', defaultValue: repoUrl,
                    description: 'Git repository URL'),
-            steps.string(name: 'GIT_BRANCH', defaultValue: overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main',
+            steps.choice(name: 'GIT_BRANCH', choices: branches,
                    description: 'Git branch to build'),
-            steps.credentials(name: 'GIT_CREDENTIALS_ID', defaultValue: overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: '',
+            steps.credentials(name: 'GIT_CREDENTIALS_ID', defaultValue: credId,
                    description: 'Git credential (leave empty for public repos)',
                    credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials', required: false)
         ]
@@ -32,6 +36,41 @@ class Git implements Serializable {
         )
         ctx.vcsType = 'Git'
         ctx.revision = getCommitHash()
+    }
+
+    private List<String> listBranches(String repoUrl, String credentialsId, String defaultBranch) {
+        if (!repoUrl) {
+            return [defaultBranch]
+        }
+        try {
+            def output
+            if (credentialsId) {
+                output = steps.withCredentials([steps.usernamePassword(
+                        credentialsId: credentialsId,
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_PASS')]) {
+                    steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+                }
+            } else {
+                output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+            }
+            def branches = output.trim().readLines()
+                .collect { it.replaceAll(/.*refs\/heads\//, '') }
+                .findAll { it }
+                .sort()
+            if (!branches) {
+                return [defaultBranch]
+            }
+            // Move the default branch to the top if present
+            if (branches.contains(defaultBranch)) {
+                branches.remove(defaultBranch)
+                branches.add(0, defaultBranch)
+            }
+            return branches
+        } catch (Exception e) {
+            steps.echo "Warning: could not list branches for ${repoUrl}: ${e.message}"
+            return [defaultBranch]
+        }
     }
 
     def checkout(Map config) {
