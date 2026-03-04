@@ -43,16 +43,18 @@ class Git implements Serializable {
             return [defaultBranch]
         }
         try {
-            def output
-            if (credentialsId) {
-                output = steps.withCredentials([steps.usernamePassword(
-                        credentialsId: credentialsId,
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS')]) {
-                    steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+            def output = ''
+            steps.node('Windows') {
+                if (credentialsId) {
+                    steps.withCredentials([steps.usernamePassword(
+                            credentialsId: credentialsId,
+                            usernameVariable: 'GIT_USER',
+                            passwordVariable: 'GIT_PASS')]) {
+                        output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+                    }
+                } else {
+                    output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
                 }
-            } else {
-                output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
             }
             def branches = output.trim().readLines()
                 .collect { it.replaceAll(/.*refs\/heads\//, '') }
@@ -78,11 +80,15 @@ class Git implements Serializable {
         def branch = config.branch ?: 'main'
         def credentialsId = config.credentialsId ?: ''
 
+        def userRemoteConfigs = [url: url]
         if (credentialsId) {
-            steps.git url: url, branch: branch, credentialsId: credentialsId
-        } else {
-            steps.git url: url, branch: branch
+            userRemoteConfigs.credentialsId = credentialsId
         }
+        steps.checkout([
+            $class: 'GitSCM',
+            branches: [[name: "*/${branch}"]],
+            userRemoteConfigs: [userRemoteConfigs]
+        ])
     }
 
     def getCommitHash() {
