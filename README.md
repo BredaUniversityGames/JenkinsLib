@@ -23,6 +23,26 @@ stages {
 
 Comment or uncomment modules to add or remove stages. All configuration is done via Jenkins UI parameters.
 
+### Matrix Builds
+
+Build multiple platform/config combinations from a single Jenkinsfile using `matrix()`:
+
+```groovy
+stages {
+    perforce.sync()
+    matrix(UE5_BUILD_PLATFORM: ['Win64', 'PS4'],
+           UE5_BUILD_CONFIG: ['Development', 'Shipping']) {
+        ue5.build()
+        only(UE5_BUILD_PLATFORM: 'Win64', UE5_BUILD_CONFIG: 'Shipping') {
+            steam.deploy()
+        }
+    }
+    discord.alert()
+}
+```
+
+Stages outside the matrix run once; stages inside repeat for each combination. Use `only()` to restrict specific stages to certain combinations. See **[Matrix Builds](../../wiki/Matrix)** for details.
+
 ## Documentation
 
 See the **[Wiki](../../wiki)** for full documentation:
@@ -30,6 +50,7 @@ See the **[Wiki](../../wiki)** for full documentation:
 - **[Quick Start](../../wiki/Quick-Start)** — Set up your first pipeline
 - **[Server Setup](../../wiki/Server-Setup)** — Jenkins administration, plugins, security, credentials
 - **[Architecture](../../wiki/Architecture)** — Module system, design principles, how to extend
+- **[Matrix Builds](../../wiki/Matrix)** — Multi-axis builds for platform/config combinations
 
 ### Stage Reference
 
@@ -42,3 +63,4 @@ See the **[Wiki](../../wiki)** for full documentation:
 | Code Review | [swarm.review()](../../wiki/Swarm) |
 | Debug Symbols | [sentry.upload()](../../wiki/Sentry) |
 | Notifications | [discord.alert()](../../wiki/Discord) |
+| Matrix | [matrix()](../../wiki/Matrix), [only()](../../wiki/Matrix#only-conditional-filter) |
