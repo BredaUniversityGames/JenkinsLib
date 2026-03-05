@@ -98,18 +98,15 @@ class Git implements Serializable {
             remoteConfig.credentialsId = credentialsId
         }
         steps.withEnv(NO_PROMPT_ENV) {
-            steps.checkout([
-                $class: 'GitSCM',
+            steps.checkout steps.scmGit(
                 branches: [[name: "*/${branch}"]],
                 userRemoteConfigs: [remoteConfig],
                 extensions: [
-                    [$class: 'CloneOption', shallow: true, depth: 1],
-                    [$class: 'SubmoduleOption',
-                     recursiveSubmodules: true,
-                     parentCredentials: true,
-                     shallow: true, depth: 1]
+                    steps.submodule(depth: 1, parentCredentials: true,
+                        recursiveSubmodules: true, shallow: true),
+                    steps.cloneOption(shallow: true, depth: 1)
                 ]
-            ])
+            )
         }
     }
 
