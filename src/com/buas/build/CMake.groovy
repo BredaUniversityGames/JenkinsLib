@@ -46,17 +46,25 @@ class CMake implements Serializable {
         try {
             steps.node('Windows') {
                 steps.withEnv(NO_PROMPT_ENV) {
-                    def tmpDir = "%TEMP%\\cmake_presets_%RANDOM%"
-                    def script = "@set TMPDIR=${tmpDir} && git clone --depth 1 --no-checkout -b ${branch} \"${repoUrl}\" \"%TMPDIR%\" 2>nul && cd /d \"%TMPDIR%\" && git show HEAD:${presetsPath} 2>nul & cd /d \"%TEMP%\" && rmdir /s /q \"%TMPDIR%\" 2>nul"
+                    def tmpDir = "${steps.env.TEMP}\\cmake_presets_${steps.env.BUILD_NUMBER}"
+                    def cloneCmd = "@git clone --depth 1 --no-checkout -b ${branch} \"${repoUrl}\" \"${tmpDir}\" 2>nul"
+                    def showCmd = "@cd /d \"${tmpDir}\" && git show HEAD:${presetsPath}"
+                    def cleanupCmd = "@cd /d \"%TEMP%\" && if exist \"${tmpDir}\" rmdir /s /q \"${tmpDir}\" 2>nul"
                     def output = ''
-                    if (credId) {
-                        steps.withCredentials([steps.gitUsernamePassword(
-                                credentialsId: credId,
-                                gitToolName: 'Default')]) {
-                            output = steps.bat(script: script, returnStdout: true).trim()
+                    try {
+                        if (credId) {
+                            steps.withCredentials([steps.gitUsernamePassword(
+                                    credentialsId: credId,
+                                    gitToolName: 'Default')]) {
+                                steps.bat(script: cloneCmd, returnStatus: true)
+                                output = steps.bat(script: showCmd, returnStdout: true).trim()
+                            }
+                        } else {
+                            steps.bat(script: cloneCmd, returnStatus: true)
+                            output = steps.bat(script: showCmd, returnStdout: true).trim()
                         }
-                    } else {
-                        output = steps.bat(script: script, returnStdout: true).trim()
+                    } finally {
+                        steps.bat(script: cleanupCmd, returnStatus: true)
                     }
                     if (output) {
                         parsePresets(output)
