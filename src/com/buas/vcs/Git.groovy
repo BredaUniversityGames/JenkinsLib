@@ -6,6 +6,7 @@ package com.buas.vcs
  */
 class Git implements Serializable {
     def steps
+    private static final NO_PROMPT_ENV = ['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']
 
     Git(steps) {
         this.steps = steps
@@ -46,16 +47,15 @@ class Git implements Serializable {
             def headOutput = ''
             def branchOutput = ''
             steps.node('Windows') {
-                if (credentialsId) {
-                    steps.withCredentials([steps.usernamePassword(
-                            credentialsId: credentialsId,
-                            usernameVariable: 'GIT_USER',
-                            passwordVariable: 'GIT_PASS')]) {
-                        headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
-                        branchOutput = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
-                    }
-                } else {
-                    steps.withEnv(['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']) {
+                steps.withEnv(NO_PROMPT_ENV) {
+                    if (credentialsId) {
+                        steps.withCredentials([steps.string(
+                                credentialsId: credentialsId,
+                                variable: 'GIT_TOKEN')]) {
+                            headOutput = steps.bat(script: "@git -c http.extraHeader=\"Authorization: Bearer %GIT_TOKEN%\" ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
+                            branchOutput = steps.bat(script: "@git -c http.extraHeader=\"Authorization: Bearer %GIT_TOKEN%\" ls-remote --heads ${repoUrl}", returnStdout: true)
+                        }
+                    } else {
                         headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
                         branchOutput = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
                     }
@@ -91,19 +91,28 @@ class Git implements Serializable {
         def branch = config.branch ?: 'main'
         def credentialsId = config.credentialsId ?: ''
 
-        def userRemoteConfigs = [url: url]
-        if (credentialsId) {
-            userRemoteConfigs.credentialsId = credentialsId
-        }
         def scmConfig = [
             $class: 'GitSCM',
             branches: [[name: "*/${branch}"]],
-            userRemoteConfigs: [userRemoteConfigs]
+            userRemoteConfigs: [[url: url]],
+            extensions: [[$class: 'CloneOption', shallow: true, depth: 1],
+                         [$class: 'SubmoduleOption',
+                          recursiveSubmodules: true,
+                          parentCredentials: true,
+                          shallow: true, depth: 1]]
         ]
-        if (credentialsId) {
-            steps.checkout(scmConfig)
-        } else {
-            steps.withEnv(['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']) {
+        steps.withEnv(NO_PROMPT_ENV) {
+            if (credentialsId) {
+                steps.withCredentials([steps.string(
+                        credentialsId: credentialsId,
+                        variable: 'GIT_TOKEN')]) {
+                    steps.withEnv(["GIT_CONFIG_COUNT=1",
+                            "GIT_CONFIG_KEY_0=http.extraHeader",
+                            "GIT_CONFIG_VALUE_0=Authorization: Bearer ${steps.env.GIT_TOKEN}"]) {
+                        steps.checkout(scmConfig)
+                    }
+                }
+            } else {
                 steps.checkout(scmConfig)
             }
         }
