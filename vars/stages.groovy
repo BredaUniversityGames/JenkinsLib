@@ -51,14 +51,13 @@ def call(Closure body) {
     }
 
     // Collect parameters from all registered modules
-    def allParams = [
-        booleanParam(name: 'CLEAN_WORKSPACE',
-                     defaultValue: params?.CLEAN_WORKSPACE != null ? params.CLEAN_WORKSPACE : true,
-                     description: 'Clean workspace after build')
-    ]
+    def allParams = []
     modules.each { mod ->
         allParams.addAll(mod.params ?: [])
     }
+    allParams << booleanParam(name: 'CLEAN_WORKSPACE',
+                     defaultValue: params?.CLEAN_WORKSPACE != null ? params.CLEAN_WORKSPACE : true,
+                     description: 'Clean workspace after build')
     properties([parameters(allParams)])
 
     // Split modules into pre-matrix, matrix, post-matrix by registration order
