@@ -98,8 +98,9 @@ class CMake implements Serializable {
                 steps.choice(name: 'CMAKE_GENERATOR',
                        choices: overrides.CMAKE_GENERATOR_CHOICES ?: ['Ninja', 'Visual Studio 17 2022', 'Visual Studio 16 2019', 'Unix Makefiles'],
                        description: 'CMake generator'),
-                steps.string(name: 'CMAKE_CONFIG', defaultValue: overrides.CMAKE_CONFIG ?: prev.CMAKE_CONFIG ?: 'Debug',
-                       description: 'Build configuration (Debug, Release, RelWithDebInfo, MinSizeRel)'),
+                steps.choice(name: 'CMAKE_CONFIG',
+                       choices: overrides.CMAKE_CONFIG_CHOICES ?: ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'],
+                       description: 'Build configuration'),
                 steps.string(name: 'CMAKE_PLATFORM', defaultValue: overrides.CMAKE_PLATFORM ?: prev.CMAKE_PLATFORM ?: 'x64',
                        description: 'Target platform')
             ])
