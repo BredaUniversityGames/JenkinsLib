@@ -49,13 +49,11 @@ class Git implements Serializable {
             steps.node('Windows') {
                 steps.withEnv(NO_PROMPT_ENV) {
                     if (credentialsId) {
-                        steps.withCredentials([steps.usernamePassword(
+                        steps.withCredentials([steps.gitUsernamePassword(
                                 credentialsId: credentialsId,
-                                usernameVariable: 'GIT_USER',
-                                passwordVariable: 'GIT_PASS')]) {
-                            def authedUrl = repoUrl.replaceFirst('https://', 'https://%GIT_USER%:%GIT_PASS%@')
-                            headOutput = steps.bat(script: "@git ls-remote --symref ${authedUrl} HEAD", returnStdout: true)
-                            branchOutput = steps.bat(script: "@git ls-remote --heads ${authedUrl}", returnStdout: true)
+                                gitToolName: 'Default')]) {
+                            headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
+                            branchOutput = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
                         }
                     } else {
                         headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
