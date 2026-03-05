@@ -80,20 +80,16 @@ class CMake implements Serializable {
 
     private void parsePresets(String content) {
         def json = new JsonSlurper().parseText(content)
-        presets.configurePresets = extractPresetNames('configure', json.configurePresets)
-        presets.buildPresets     = extractPresetNames('build', json.buildPresets)
-        presets.testPresets      = extractPresetNames('test', json.testPresets)
-        presets.packagePresets   = extractPresetNames('package', json.packagePresets)
-        presets.workflowPresets  = extractPresetNames('workflow', json.workflowPresets)
-        steps.echo "Discovered presets: configure=${presets.configurePresets}, build=${presets.buildPresets}, test=${presets.testPresets}, package=${presets.packagePresets}, workflow=${presets.workflowPresets}"
+        presets.configurePresets = extractPresetNames(json.configurePresets)
+        presets.buildPresets     = extractPresetNames(json.buildPresets)
+        presets.testPresets      = extractPresetNames(json.testPresets)
+        presets.packagePresets   = extractPresetNames(json.packagePresets)
+        presets.workflowPresets  = extractPresetNames(json.workflowPresets)
     }
 
-    private List<String> extractPresetNames(String category, List presetList) {
-        steps.echo "extractPresetNames(${category}): input=${presetList?.size() ?: 'null'} entries"
+    private static List<String> extractPresetNames(List presetList) {
         if (!presetList) return []
-        def names = presetList.findAll { !(it.hidden ?: false) }.collect { it.name }
-        steps.echo "extractPresetNames(${category}): found ${names}"
-        return names
+        return presetList.findAll { !(it.hidden ?: false) }.collect { it.name }
     }
 
     boolean hasPresets() {
