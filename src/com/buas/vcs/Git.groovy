@@ -53,7 +53,9 @@ class Git implements Serializable {
                         output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
                     }
                 } else {
-                    output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+                    steps.withEnv(['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']) {
+                        output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+                    }
                 }
             }
             def branches = output.trim().readLines()
