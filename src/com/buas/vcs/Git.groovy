@@ -43,32 +43,41 @@ class Git implements Serializable {
             return [defaultBranch]
         }
         try {
-            def output = ''
+            def headOutput = ''
+            def branchOutput = ''
             steps.node('Windows') {
                 if (credentialsId) {
                     steps.withCredentials([steps.usernamePassword(
                             credentialsId: credentialsId,
                             usernameVariable: 'GIT_USER',
                             passwordVariable: 'GIT_PASS')]) {
-                        output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+                        headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
+                        branchOutput = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
                     }
                 } else {
                     steps.withEnv(['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']) {
-                        output = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
+                        headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
+                        branchOutput = steps.bat(script: "@git ls-remote --heads ${repoUrl}", returnStdout: true)
                     }
                 }
             }
-            def branches = output.trim().readLines()
+            // Detect the remote default branch from symref output
+            def remoteDefault = defaultBranch
+            def symrefMatch = (headOutput =~ /ref: refs\/heads\/(\S+)\s+HEAD/)
+            if (symrefMatch) {
+                remoteDefault = symrefMatch[0][1]
+            }
+            def branches = branchOutput.trim().readLines()
                 .collect { it.replaceAll(/.*refs\/heads\//, '') }
                 .findAll { it }
                 .sort()
             if (!branches) {
-                return [defaultBranch]
+                return [remoteDefault]
             }
-            // Move the default branch to the top if present
-            if (branches.contains(defaultBranch)) {
-                branches.remove(defaultBranch)
-                branches.add(0, defaultBranch)
+            // Move the remote default branch to the top if present
+            if (branches.contains(remoteDefault)) {
+                branches.remove(remoteDefault)
+                branches.add(0, remoteDefault)
             }
             return branches
         } catch (Exception e) {
@@ -86,11 +95,18 @@ class Git implements Serializable {
         if (credentialsId) {
             userRemoteConfigs.credentialsId = credentialsId
         }
-        steps.checkout([
+        def scmConfig = [
             $class: 'GitSCM',
             branches: [[name: "*/${branch}"]],
             userRemoteConfigs: [userRemoteConfigs]
-        ])
+        ]
+        if (credentialsId) {
+            steps.checkout(scmConfig)
+        } else {
+            steps.withEnv(['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']) {
+                steps.checkout(scmConfig)
+            }
+        }
     }
 
     def getCommitHash() {
