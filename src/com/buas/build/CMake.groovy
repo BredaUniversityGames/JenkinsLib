@@ -5,55 +5,78 @@ import groovy.json.JsonSlurper
 /**
  * CMake build module.
  * Supports both manual flag-based builds and CMakePresets.json preset-based builds.
- * When CMakePresets.json is found in the workspace (from a previous build) or preset
- * lists are provided via overrides, preset choice parameters are shown instead of
- * manual generator/config/platform parameters.
+ * Fetches CMakePresets.json directly from the Git remote (using GIT_REPO_URL and
+ * GIT_CREDENTIALS_ID params) to populate preset choices. Falls back to manual
+ * generator/config/platform parameters when no presets are found.
  */
 class CMake implements Serializable {
     def steps
     private Map presets = [:]
+    private static final NO_PROMPT_ENV = ['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']
 
     CMake(steps) {
         this.steps = steps
     }
 
     /**
-     * Discover presets from overrides or by reading CMakePresets.json from the workspace.
+     * Discover presets from overrides or by fetching CMakePresets.json from the Git remote.
      * Returns a map with keys: configurePresets, buildPresets, testPresets, packagePresets, workflowPresets.
      */
-    Map discoverPresets(String sourceDir, Map overrides) {
+    Map discoverPresets(String srcDir, Map overrides) {
+        def sourceDir = srcDir ?: '.'
         presets = [
-            configurePresets: overrides.CMAKE_CONFIGURE_PRESETS as List ?: [],
-            buildPresets:     overrides.CMAKE_BUILD_PRESETS as List ?: [],
-            testPresets:      overrides.CMAKE_TEST_PRESETS as List ?: [],
-            packagePresets:   overrides.CMAKE_PACKAGE_PRESETS as List ?: [],
-            workflowPresets:  overrides.CMAKE_WORKFLOW_PRESETS as List ?: []
+            configurePresets: [],
+            buildPresets:     [],
+            testPresets:      [],
+            packagePresets:   [],
+            workflowPresets:  []
         ]
 
-        if (presets.values().any { it }) {
+        def prev = steps.params ?: [:]
+        def repoUrl = overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: ''
+        def credId = overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: ''
+        def branch = overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main'
+
+        if (!repoUrl) {
             return presets
         }
 
+        def presetsPath = sourceDir == '.' ? 'CMakePresets.json' : "${sourceDir}/CMakePresets.json"
+
         try {
             steps.node('Windows') {
-                def wsBase = "C:\\Jenkins\\${steps.env.JOB_NAME}"
-                def presetsDir = sourceDir == '.' ? wsBase : "${wsBase}\\${sourceDir}"
-                def presetsFile = "${presetsDir}\\CMakePresets.json"
-                def output = steps.bat(script: "@if exist \"${presetsFile}\" type \"${presetsFile}\"", returnStdout: true).trim()
-                if (output) {
-                    def json = new JsonSlurper().parseText(output)
-                    presets.configurePresets = extractPresetNames(json.configurePresets)
-                    presets.buildPresets     = extractPresetNames(json.buildPresets)
-                    presets.testPresets      = extractPresetNames(json.testPresets)
-                    presets.packagePresets   = extractPresetNames(json.packagePresets)
-                    presets.workflowPresets  = extractPresetNames(json.workflowPresets)
+                steps.withEnv(NO_PROMPT_ENV) {
+                    def tmpDir = "%TEMP%\\cmake_presets_%RANDOM%"
+                    def script = "@set TMPDIR=${tmpDir} && git clone --depth 1 --no-checkout -b ${branch} \"${repoUrl}\" \"%TMPDIR%\" 2>nul && cd /d \"%TMPDIR%\" && git show HEAD:${presetsPath} 2>nul & cd /d \"%TEMP%\" && rmdir /s /q \"%TMPDIR%\" 2>nul"
+                    def output = ''
+                    if (credId) {
+                        steps.withCredentials([steps.gitUsernamePassword(
+                                credentialsId: credId,
+                                gitToolName: 'Default')]) {
+                            output = steps.bat(script: script, returnStdout: true).trim()
+                        }
+                    } else {
+                        output = steps.bat(script: script, returnStdout: true).trim()
+                    }
+                    if (output) {
+                        parsePresets(output)
+                    }
                 }
             }
         } catch (Exception e) {
-            steps.echo "Note: Could not read CMakePresets.json: ${e.message}"
+            steps.echo "Note: Could not fetch CMakePresets.json from ${repoUrl}: ${e.message}"
         }
 
         return presets
+    }
+
+    private void parsePresets(String content) {
+        def json = new JsonSlurper().parseText(content)
+        presets.configurePresets = extractPresetNames(json.configurePresets)
+        presets.buildPresets     = extractPresetNames(json.buildPresets)
+        presets.testPresets      = extractPresetNames(json.testPresets)
+        presets.packagePresets   = extractPresetNames(json.packagePresets)
+        presets.workflowPresets  = extractPresetNames(json.workflowPresets)
     }
 
     private static List<String> extractPresetNames(List presetList) {

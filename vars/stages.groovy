@@ -55,10 +55,19 @@ def call(Closure body) {
     modules.each { mod ->
         allParams.addAll(mod.params ?: [])
     }
+    allParams << booleanParam(name: 'REFRESH_PARAMETERS',
+                     defaultValue: false,
+                     description: 'Only refresh pipeline parameters (skip build)')
     allParams << booleanParam(name: 'CLEAN_WORKSPACE',
                      defaultValue: params?.CLEAN_WORKSPACE != null ? params.CLEAN_WORKSPACE : true,
                      description: 'Clean workspace after build')
     properties([parameters(allParams)])
+
+    if (params.REFRESH_PARAMETERS) {
+        currentBuild.result = 'NOT_BUILT'
+        echo "Parameters refreshed. Rebuild with 'Build with Parameters' to run the pipeline."
+        return
+    }
 
     // Split modules into pre-matrix, matrix, post-matrix by registration order
     def matrixIndex = modules.findIndexOf { it.category == 'matrix' }
