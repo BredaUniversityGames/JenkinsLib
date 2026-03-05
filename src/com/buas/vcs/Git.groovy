@@ -49,11 +49,13 @@ class Git implements Serializable {
             steps.node('Windows') {
                 steps.withEnv(NO_PROMPT_ENV) {
                     if (credentialsId) {
-                        steps.withCredentials([steps.string(
+                        steps.withCredentials([steps.usernamePassword(
                                 credentialsId: credentialsId,
-                                variable: 'GIT_TOKEN')]) {
-                            headOutput = steps.bat(script: "@git -c http.extraHeader=\"Authorization: Bearer %GIT_TOKEN%\" ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
-                            branchOutput = steps.bat(script: "@git -c http.extraHeader=\"Authorization: Bearer %GIT_TOKEN%\" ls-remote --heads ${repoUrl}", returnStdout: true)
+                                usernameVariable: 'GIT_USER',
+                                passwordVariable: 'GIT_PASS')]) {
+                            def authedUrl = repoUrl.replaceFirst('https://', 'https://%GIT_USER%:%GIT_PASS%@')
+                            headOutput = steps.bat(script: "@git ls-remote --symref ${authedUrl} HEAD", returnStdout: true)
+                            branchOutput = steps.bat(script: "@git ls-remote --heads ${authedUrl}", returnStdout: true)
                         }
                     } else {
                         headOutput = steps.bat(script: "@git ls-remote --symref ${repoUrl} HEAD", returnStdout: true)
@@ -91,30 +93,22 @@ class Git implements Serializable {
         def branch = config.branch ?: 'main'
         def credentialsId = config.credentialsId ?: ''
 
-        def scmConfig = [
-            $class: 'GitSCM',
-            branches: [[name: "*/${branch}"]],
-            userRemoteConfigs: [[url: url]],
-            extensions: [[$class: 'CloneOption', shallow: true, depth: 1],
-                         [$class: 'SubmoduleOption',
-                          recursiveSubmodules: true,
-                          parentCredentials: true,
-                          shallow: true, depth: 1]]
-        ]
+        def remoteConfig = [url: url]
+        if (credentialsId) {
+            remoteConfig.credentialsId = credentialsId
+        }
         steps.withEnv(NO_PROMPT_ENV) {
-            if (credentialsId) {
-                steps.withCredentials([steps.string(
-                        credentialsId: credentialsId,
-                        variable: 'GIT_TOKEN')]) {
-                    steps.withEnv(["GIT_CONFIG_COUNT=1",
-                            "GIT_CONFIG_KEY_0=http.extraHeader",
-                            "GIT_CONFIG_VALUE_0=Authorization: Bearer ${steps.env.GIT_TOKEN}"]) {
-                        steps.checkout(scmConfig)
-                    }
-                }
-            } else {
-                steps.checkout(scmConfig)
-            }
+            steps.checkout steps.scmGit(
+                branches: [[name: "*/${branch}"]],
+                userRemoteConfigs: [remoteConfig],
+                extensions: [
+                    steps.cloneOption(shallow: true, depth: 1),
+                    steps.submoduleOption(
+                        recursiveSubmodules: true,
+                        parentCredentials: true,
+                        shallow: true, depth: 1)
+                ]
+            )
         }
     }
 
