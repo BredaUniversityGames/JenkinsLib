@@ -101,12 +101,15 @@ class CMake implements Serializable {
         presets.workflowPresets  = extractPresetNames(json.workflowPresets)
 
         // Store test preset → configurePreset mapping for configure+build+test flow
-        presets.testConfigureMap = [:]
-        (json.testPresets ?: []).findAll { !(it.hidden ?: false) }.each {
-            if (it.configurePreset) {
-                presets.testConfigureMap[it.name] = it.configurePreset
+        def testConfigMap = [:]
+        def rawTestPresets = json.testPresets ?: []
+        for (int i = 0; i < rawTestPresets.size(); i++) {
+            def tp = rawTestPresets[i]
+            if (!(tp.hidden ?: false) && tp.configurePreset) {
+                testConfigMap[tp.name] = tp.configurePreset
             }
         }
+        presets.testConfigureMap = testConfigMap
     }
 
     private static List<String> extractPresetNames(List presetList) {
