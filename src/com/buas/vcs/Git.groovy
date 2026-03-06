@@ -16,7 +16,7 @@ class Git implements Serializable {
         def prev = steps.params ?: [:]
         def repoUrl = overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: ''
         def credId = overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: ''
-        def defaultBranch = overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main'
+        def defaultBranch = overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: ''
         def branches = listBranches(repoUrl, credId, defaultBranch)
         return [
             steps.string(name: 'GIT_REPO_URL', defaultValue: repoUrl,
@@ -41,7 +41,7 @@ class Git implements Serializable {
 
     private List<String> listBranches(String repoUrl, String credentialsId, String defaultBranch) {
         if (!repoUrl) {
-            return [defaultBranch]
+            return [defaultBranch ?: 'main']
         }
         try {
             def headOutput = ''
@@ -74,15 +74,20 @@ class Git implements Serializable {
             if (!branches) {
                 return [remoteDefault]
             }
-            // Move the remote default branch to the top if present
+            // Move the remote default branch to the top, then the previous
+            // selection above it so the user's choice is preserved.
             if (branches.contains(remoteDefault)) {
                 branches.remove(remoteDefault)
                 branches.add(0, remoteDefault)
             }
+            if (defaultBranch && defaultBranch != remoteDefault && branches.contains(defaultBranch)) {
+                branches.remove(defaultBranch)
+                branches.add(0, defaultBranch)
+            }
             return branches
         } catch (Exception e) {
             steps.echo "Warning: could not list branches for ${repoUrl}: ${e.message}"
-            return [defaultBranch]
+            return [defaultBranch ?: 'main']
         }
     }
 
