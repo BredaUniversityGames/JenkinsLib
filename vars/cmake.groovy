@@ -17,28 +17,36 @@ import com.buas.build.CMake
 
 @Field def _impl = null
 
+private def getImpl() {
+    if (_impl == null) {
+        _impl = new CMake(this)
+    }
+    return _impl
+}
+
 def build(Map overrides = [:]) {
-    _impl = new CMake(this)
+    def impl = getImpl()
     ModuleRegistry.register(
         category: 'build',
         name: 'CMake Build',
-        params: _impl.buildPipelineParams(overrides),
-        execute: { params, ctx -> _impl.execute(params, ctx) },
+        params: impl.buildPipelineParams(overrides),
+        execute: { params, ctx -> impl.execute(params, ctx) },
         hasCleanup: false
     )
 }
 
 def test(Map overrides = [:]) {
+    def impl = getImpl()
     ModuleRegistry.register(
         category: 'test',
         name: 'CMake Test',
-        params: _impl.testPipelineParams(overrides),
+        params: impl.testPipelineParams(overrides),
         execute: { params, ctx ->
             if (params.CMAKE_TEST_PRESET) {
                 def resultsDir = "${env.WORKSPACE}\\TestResults"
                 bat(label: "Create test results directory", script: "if not exist \"${resultsDir}\" mkdir \"${resultsDir}\"")
 
-                _impl.testWithPreset(
+                impl.testWithPreset(
                     preset: params.CMAKE_TEST_PRESET,
                     resultsFile: "${resultsDir}\\ctest_results.xml"
                 )
@@ -83,7 +91,8 @@ def test(Map overrides = [:]) {
 }
 
 def pack(Map overrides = [:]) {
-    def packParams = _impl.packagePipelineParams()
+    def impl = getImpl()
+    def packParams = impl.packagePipelineParams()
     if (!packParams) {
         log.warning("cmake.pack() requires package presets in CMakePresets.json")
         return
@@ -93,14 +102,15 @@ def pack(Map overrides = [:]) {
         name: 'CMake Package',
         params: packParams,
         execute: { params, ctx ->
-            _impl.packageWithPreset(preset: params.CMAKE_PACKAGE_PRESET)
+            impl.packageWithPreset(preset: params.CMAKE_PACKAGE_PRESET)
         },
         hasCleanup: false
     )
 }
 
 def workflow(Map overrides = [:]) {
-    def workflowParams = _impl.workflowPipelineParams()
+    def impl = getImpl()
+    def workflowParams = impl.workflowPipelineParams()
     if (!workflowParams) {
         log.warning("cmake.workflow() requires workflow presets in CMakePresets.json")
         return
@@ -110,7 +120,7 @@ def workflow(Map overrides = [:]) {
         name: 'CMake Workflow',
         params: workflowParams,
         execute: { params, ctx ->
-            _impl.workflowWithPreset(preset: params.CMAKE_WORKFLOW_PRESET)
+            impl.workflowWithPreset(preset: params.CMAKE_WORKFLOW_PRESET)
             ctx.buildEngine = 'CMake'
         },
         hasCleanup: false
@@ -118,11 +128,11 @@ def workflow(Map overrides = [:]) {
 }
 
 // Direct-use methods
-def configure(Map config) { _impl.configure(config) }
-def configureWithPreset(Map config) { _impl.configureWithPreset(config) }
-def buildProject(Map config) { _impl.build(config) }
-def buildWithPreset(Map config) { _impl.buildWithPreset(config) }
-def install(Map config) { _impl.install(config) }
-def testWithPreset(Map config) { _impl.testWithPreset(config) }
-def packageWithPreset(Map config) { _impl.packageWithPreset(config) }
-def workflowWithPreset(Map config) { _impl.workflowWithPreset(config) }
+def configure(Map config) { getImpl().configure(config) }
+def configureWithPreset(Map config) { getImpl().configureWithPreset(config) }
+def buildProject(Map config) { getImpl().build(config) }
+def buildWithPreset(Map config) { getImpl().buildWithPreset(config) }
+def install(Map config) { getImpl().install(config) }
+def testWithPreset(Map config) { getImpl().testWithPreset(config) }
+def packageWithPreset(Map config) { getImpl().packageWithPreset(config) }
+def workflowWithPreset(Map config) { getImpl().workflowWithPreset(config) }
