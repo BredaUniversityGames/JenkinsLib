@@ -13,6 +13,18 @@ class CMake implements Serializable {
     def steps
     private Map presets = [:]
     private static final NO_PROMPT_ENV = ['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']
+    private static final VSWHERE = '%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe'
+    private static final VCVARSALL_ARCH = [
+        'x64':   'x64',
+        'Win32': 'x86',
+        'ARM64': 'amd64_arm64'
+    ]
+
+    private static String vsEnvPrefix(String platform) {
+        def arch = VCVARSALL_ARCH[platform] ?: 'x64'
+        "for /f \"tokens=*\" %%i in ('\"${VSWHERE}\" -latest -property installationPath') do " +
+        "call \"%%i\\VC\\Auxiliary\\Build\\vcvarsall.bat\" ${arch} >nul 2>&1"
+    }
 
     CMake(steps) {
         this.steps = steps
@@ -92,6 +104,12 @@ class CMake implements Serializable {
         return presetList.findAll { !(it.hidden ?: false) }.collect { it.name }
     }
 
+    private void batWithVsEnv(Map args) {
+        def arch = args.arch ?: 'x64'
+        def script = "${vsEnvPrefix(arch)}\n${args.script}"
+        steps.bat(label: args.label, script: script)
+    }
+
     private static List<String> reorderChoices(List<String> choices, String previous) {
         if (!previous || !choices.contains(previous)) return choices
         return [previous] + choices.findAll { it != previous }
@@ -137,7 +155,8 @@ class CMake implements Serializable {
                 steps.choice(name: 'CMAKE_CONFIG',
                        choices: reorderChoices(overrides.CMAKE_CONFIG_CHOICES ?: ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'], prev.CMAKE_CONFIG),
                        description: 'Build configuration'),
-                steps.string(name: 'CMAKE_PLATFORM', defaultValue: overrides.CMAKE_PLATFORM ?: prev.CMAKE_PLATFORM ?: 'x64',
+                steps.choice(name: 'CMAKE_PLATFORM',
+                       choices: reorderChoices(overrides.CMAKE_PLATFORM_CHOICES ?: ['x64', 'Win32', 'ARM64'], prev.CMAKE_PLATFORM),
                        description: 'Target platform')
             ])
         }
@@ -214,6 +233,7 @@ class CMake implements Serializable {
             build(
                 buildDir:  params.CMAKE_BUILD_DIR,
                 config:    params.CMAKE_CONFIG,
+                platform:  params.CMAKE_PLATFORM,
                 buildArgs: params.CMAKE_BUILD_ARGS
             )
             ctx.buildConfig = params.CMAKE_CONFIG
@@ -233,7 +253,7 @@ class CMake implements Serializable {
         if (extraArgs) {
             cmd += " ${extraArgs}"
         }
-        steps.bat(label: "CMake configure (preset: ${preset})", script: cmd)
+        batWithVsEnv(label: "CMake configure (preset: ${preset})", script: cmd)
     }
 
     def buildWithPreset(Map config) {
@@ -244,7 +264,7 @@ class CMake implements Serializable {
         if (buildArgs) {
             cmd += " ${buildArgs}"
         }
-        steps.bat(label: "CMake build (preset: ${preset})", script: cmd)
+        batWithVsEnv(label: "CMake build (preset: ${preset})", script: cmd)
     }
 
     def testWithPreset(Map config) {
@@ -264,7 +284,7 @@ class CMake implements Serializable {
     def workflowWithPreset(Map config) {
         def preset = config.preset
 
-        steps.bat(label: "CMake workflow (preset: ${preset})",
+        batWithVsEnv(label: "CMake workflow (preset: ${preset})",
             script: "cmake --workflow --preset \"${preset}\"")
     }
 
@@ -288,12 +308,13 @@ class CMake implements Serializable {
             cmd += " ${extraArgs}"
         }
 
-        steps.bat(label: "CMake configure", script: cmd)
+        batWithVsEnv(label: "CMake configure", script: cmd, arch: platform)
     }
 
     def build(Map config) {
         def buildDir = config.buildDir ?: 'build'
         def buildConfig = config.config ?: 'Debug'
+        def platform = config.platform ?: 'x64'
         def buildArgs = config.buildArgs ?: ''
 
         def cmd = "cmake --build \"${buildDir}\" --config ${buildConfig}"
@@ -302,7 +323,7 @@ class CMake implements Serializable {
             cmd += " ${buildArgs}"
         }
 
-        steps.bat(label: "CMake build", script: cmd)
+        batWithVsEnv(label: "CMake build", script: cmd, arch: platform)
     }
 
     def install(Map config) {
