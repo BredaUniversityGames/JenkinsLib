@@ -46,8 +46,9 @@ def test(Map overrides = [:]) {
             bat(label: "Create test results directory", script: "if not exist \"${resultsDir}\" mkdir \"${resultsDir}\"")
 
             if (params.CMAKE_TEST_PRESET) {
-                // Configure and build if no build step already ran for this test's configure preset
-                if (!ctx.buildEngine) {
+                // Configure and build for the test preset if needed
+                def testConfigPreset = impl.getTestConfigurePreset(params.CMAKE_TEST_PRESET)
+                if (testConfigPreset && testConfigPreset != ctx.cmakeConfigurePreset) {
                     impl.configureAndBuildForTest(preset: params.CMAKE_TEST_PRESET)
                 }
                 impl.testWithPreset(

@@ -278,6 +278,10 @@ class CMake implements Serializable {
         batWithVsEnv(label: "CMake build (preset: ${preset})", script: cmd)
     }
 
+    String getTestConfigurePreset(String testPreset) {
+        return presets.testConfigureMap[testPreset]
+    }
+
     def configureAndBuildForTest(Map config) {
         def testPreset = config.preset
         def configPreset = presets.testConfigureMap[testPreset]
