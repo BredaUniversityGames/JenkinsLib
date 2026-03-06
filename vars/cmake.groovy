@@ -42,49 +42,32 @@ def test(Map overrides = [:]) {
         name: 'CMake Test',
         params: impl.testPipelineParams(overrides),
         execute: { params, ctx ->
-            if (params.CMAKE_TEST_PRESET) {
-                def resultsDir = "${env.WORKSPACE}\\TestResults"
-                bat(label: "Create test results directory", script: "if not exist \"${resultsDir}\" mkdir \"${resultsDir}\"")
+            def resultsDir = "${env.WORKSPACE}\\TestResults"
+            bat(label: "Create test results directory", script: "if not exist \"${resultsDir}\" mkdir \"${resultsDir}\"")
 
+            if (params.CMAKE_TEST_PRESET) {
+                // Configure and build if no build step already ran for this test's configure preset
+                if (!ctx.buildEngine) {
+                    impl.configureAndBuildForTest(preset: params.CMAKE_TEST_PRESET)
+                }
                 impl.testWithPreset(
                     preset: params.CMAKE_TEST_PRESET,
                     resultsFile: "${resultsDir}\\ctest_results.xml"
                 )
-                junit testResults: 'TestResults/ctest_results.xml', allowEmptyResults: true
             } else {
-                def framework = params.CMAKE_TEST_FRAMEWORK
+                if (!ctx.buildEngine) {
+                    error "cmake.test() requires cmake.build() or cmake.workflow() to run first"
+                }
                 def buildDir = ctx.cmakeBuildDir ?: params.CMAKE_BUILD_DIR ?: 'build'
                 def buildConfig = ctx.buildConfig ?: params.CMAKE_CONFIG ?: 'Debug'
-                def resultsDir = "${env.WORKSPACE}\\TestResults"
-
-                bat(label: "Create test results directory", script: "if not exist \"${resultsDir}\" mkdir \"${resultsDir}\"")
-
-                switch (framework) {
-                    case 'CTest':
-                        def result = bat(label: "Run CTest",
-                            script: "cd /d \"${buildDir}\" && ctest -C ${buildConfig} --output-on-failure --output-junit \"${resultsDir}\\ctest_results.xml\"",
-                            returnStatus: true)
-                        junit testResults: 'TestResults/ctest_results.xml', allowEmptyResults: true
-                        if (result != 0) {
-                            unstable "Some CTest tests did not pass!"
-                        }
-                        break
-
-                    case 'GoogleTest':
-                        def executable = params.CMAKE_TEST_EXECUTABLE
-                        def result = bat(label: "Run GoogleTest",
-                            script: "\"${executable}\" --gtest_output=xml:\"${resultsDir}\\gtest_results.xml\"",
-                            returnStatus: true)
-                        junit testResults: 'TestResults/gtest_results.xml', allowEmptyResults: true
-                        if (result != 0) {
-                            unstable "Some GoogleTest tests did not pass!"
-                        }
-                        break
-
-                    default:
-                        log.warning("Unknown test framework: ${framework}. Supported: CTest, GoogleTest")
+                def result = bat(label: "Run CTest",
+                    script: "cd /d \"${buildDir}\" && ctest -C ${buildConfig} --output-on-failure --output-junit \"${resultsDir}\\ctest_results.xml\"",
+                    returnStatus: true)
+                if (result != 0) {
+                    unstable "Some CTest tests did not pass!"
                 }
             }
+            junit testResults: 'TestResults/ctest_results.xml', allowEmptyResults: true
         },
         hasCleanup: false
     )

@@ -37,11 +37,12 @@ class CMake implements Serializable {
     Map discoverPresets(String srcDir, Map overrides) {
         def sourceDir = srcDir ?: '.'
         presets = [
-            configurePresets: [],
-            buildPresets:     [],
-            testPresets:      [],
-            packagePresets:   [],
-            workflowPresets:  []
+            configurePresets:  [],
+            buildPresets:      [],
+            testPresets:       [],
+            packagePresets:    [],
+            workflowPresets:   [],
+            testConfigureMap:  [:]
         ]
 
         def prev = steps.params ?: [:]
@@ -97,6 +98,14 @@ class CMake implements Serializable {
         presets.testPresets      = extractPresetNames(json.testPresets)
         presets.packagePresets   = extractPresetNames(json.packagePresets)
         presets.workflowPresets  = extractPresetNames(json.workflowPresets)
+
+        // Store test preset → configurePreset mapping for configure+build+test flow
+        presets.testConfigureMap = [:]
+        (json.testPresets ?: []).findAll { !(it.hidden ?: false) }.each {
+            if (it.configurePreset) {
+                presets.testConfigureMap[it.name] = it.configurePreset
+            }
+        }
     }
 
     private static List<String> extractPresetNames(List presetList) {
@@ -173,6 +182,10 @@ class CMake implements Serializable {
 
     def testPipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
+        if (!presets.configurePresets && !presets.testPresets) {
+            def sourceDir = overrides.CMAKE_SOURCE_DIR ?: prev.CMAKE_SOURCE_DIR ?: '.'
+            discoverPresets(sourceDir, overrides)
+        }
         if (presets.testPresets) {
             return [
                 steps.choice(name: 'CMAKE_TEST_PRESET',
@@ -180,13 +193,7 @@ class CMake implements Serializable {
                     description: 'CTest preset (from CMakePresets.json)')
             ]
         }
-        return [
-            steps.choice(name: 'CMAKE_TEST_FRAMEWORK',
-                   choices: reorderChoices(overrides.CMAKE_TEST_FRAMEWORK_CHOICES ?: ['CTest', 'GoogleTest'], prev.CMAKE_TEST_FRAMEWORK),
-                   description: 'Test framework to use'),
-            steps.string(name: 'CMAKE_TEST_EXECUTABLE', defaultValue: overrides.CMAKE_TEST_EXECUTABLE ?: '',
-                   description: 'Path to test executable (GoogleTest only)')
-        ]
+        return []
     }
 
     def packagePipelineParams() {
@@ -265,6 +272,24 @@ class CMake implements Serializable {
             cmd += " ${buildArgs}"
         }
         batWithVsEnv(label: "CMake build (preset: ${preset})", script: cmd)
+    }
+
+    def configureAndBuildForTest(Map config) {
+        def testPreset = config.preset
+        def configPreset = presets.testConfigureMap[testPreset]
+        if (!configPreset) {
+            steps.error "Test preset '${testPreset}' has no configurePreset defined in CMakePresets.json"
+        }
+
+        configureWithPreset(preset: configPreset)
+
+        // Use matching build preset if available, otherwise build from the configure preset's build dir
+        if (presets.buildPresets.contains(configPreset)) {
+            buildWithPreset(preset: configPreset)
+        } else {
+            batWithVsEnv(label: "CMake build (${configPreset})",
+                script: "cmake --build \"build/${configPreset}\"")
+        }
     }
 
     def testWithPreset(Map config) {
