@@ -37,12 +37,13 @@ class CMake implements Serializable {
     Map discoverPresets(String srcDir, Map overrides) {
         def sourceDir = srcDir ?: '.'
         presets = [
-            configurePresets:  [],
-            buildPresets:      [],
-            testPresets:       [],
-            packagePresets:    [],
-            workflowPresets:   [],
-            testConfigureMap:  [:]
+            configurePresets:   [],
+            buildPresets:       [],
+            testPresets:        [],
+            packagePresets:     [],
+            workflowPresets:    [],
+            buildConfigureMap:  [:],
+            testConfigureMap:   [:]
         ]
 
         def prev = steps.params ?: [:]
@@ -100,6 +101,17 @@ class CMake implements Serializable {
         presets.packagePresets   = extractPresetNames(json.packagePresets)
         presets.workflowPresets  = extractPresetNames(json.workflowPresets)
 
+        // Store build preset → configurePreset mapping for automatic configure step
+        def buildConfigMap = [:]
+        def rawBuildPresets = json.buildPresets ?: []
+        for (int i = 0; i < rawBuildPresets.size(); i++) {
+            def bp = rawBuildPresets[i]
+            if (!(bp.hidden ?: false) && bp.configurePreset) {
+                buildConfigMap[bp.name] = bp.configurePreset
+            }
+        }
+        presets.buildConfigureMap = buildConfigMap
+
         // Store test preset → configurePreset mapping for configure+build+test flow
         def testConfigMap = [:]
         def rawTestPresets = json.testPresets ?: []
@@ -129,7 +141,7 @@ class CMake implements Serializable {
     }
 
     boolean hasPresets() {
-        return presets.configurePresets || presets.buildPresets
+        return presets.buildPresets as boolean
     }
 
     Map getPresets() {
@@ -148,16 +160,9 @@ class CMake implements Serializable {
         ]
 
         if (hasPresets()) {
-            if (presets.configurePresets) {
-                paramList << steps.choice(name: 'CMAKE_CONFIGURE_PRESET',
-                    choices: reorderChoices(presets.configurePresets, prev.CMAKE_CONFIGURE_PRESET),
-                    description: 'CMake configure preset (from CMakePresets.json)')
-            }
-            if (presets.buildPresets) {
-                paramList << steps.choice(name: 'CMAKE_BUILD_PRESET',
-                    choices: reorderChoices(presets.buildPresets, prev.CMAKE_BUILD_PRESET),
-                    description: 'CMake build preset (from CMakePresets.json)')
-            }
+            paramList << steps.choice(name: 'CMAKE_BUILD_PRESET',
+                choices: reorderChoices(presets.buildPresets, prev.CMAKE_BUILD_PRESET),
+                description: 'CMake build preset (from CMakePresets.json)')
         } else {
             paramList.addAll([
                 steps.string(name: 'CMAKE_BUILD_DIR', defaultValue: overrides.CMAKE_BUILD_DIR ?: prev.CMAKE_BUILD_DIR ?: 'build',
@@ -186,7 +191,7 @@ class CMake implements Serializable {
 
     def testPipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
-        if (!presets.configurePresets && !presets.testPresets) {
+        if (!presets.buildPresets && !presets.testPresets) {
             def sourceDir = overrides.CMAKE_SOURCE_DIR ?: prev.CMAKE_SOURCE_DIR ?: '.'
             discoverPresets(sourceDir, overrides)
         }
@@ -221,16 +226,18 @@ class CMake implements Serializable {
     }
 
     def execute(Map params, Map ctx) {
-        if (params.CMAKE_CONFIGURE_PRESET) {
-            configureWithPreset(
-                preset: params.CMAKE_CONFIGURE_PRESET,
-                args:   params.CMAKE_ARGS
-            )
+        if (params.CMAKE_BUILD_PRESET) {
+            def configPreset = presets.buildConfigureMap[params.CMAKE_BUILD_PRESET]
+            if (configPreset) {
+                configureWithPreset(
+                    preset: configPreset,
+                    args:   params.CMAKE_ARGS
+                )
+            }
             buildWithPreset(
                 preset:    params.CMAKE_BUILD_PRESET,
                 buildArgs: params.CMAKE_BUILD_ARGS
             )
-            ctx.cmakeConfigurePreset = params.CMAKE_CONFIGURE_PRESET
             ctx.cmakeBuildPreset = params.CMAKE_BUILD_PRESET
         } else {
             configure(
@@ -276,6 +283,10 @@ class CMake implements Serializable {
             cmd += " ${buildArgs}"
         }
         batWithVsEnv(label: "CMake build (preset: ${preset})", script: cmd)
+    }
+
+    String getBuildConfigurePreset(String buildPreset) {
+        return presets.buildConfigureMap[buildPreset]
     }
 
     String getTestConfigurePreset(String testPreset) {

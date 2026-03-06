@@ -7,8 +7,7 @@
  * manual generator/config/platform parameters when no presets are found.
  *
  * Preset lists can also be provided explicitly via overrides:
- *   cmake.build(CMAKE_CONFIGURE_PRESETS: ['debug', 'release'],
- *               CMAKE_BUILD_PRESETS: ['debug-build', 'release-build'])
+ *   cmake.build(CMAKE_BUILD_PRESETS: ['debug-build', 'release-build'])
  */
 
 import groovy.transform.Field
@@ -46,9 +45,11 @@ def test(Map overrides = [:]) {
             bat(label: "Create test results directory", script: "if not exist \"${resultsDir}\" mkdir \"${resultsDir}\"")
 
             if (params.CMAKE_TEST_PRESET) {
-                // Configure and build for the test preset if needed
+                // Configure and build for the test preset if its configure preset
+                // differs from what was already built
                 def testConfigPreset = impl.getTestConfigurePreset(params.CMAKE_TEST_PRESET)
-                if (testConfigPreset && testConfigPreset != ctx.cmakeConfigurePreset) {
+                def buildConfigPreset = ctx.cmakeBuildPreset ? impl.getBuildConfigurePreset(ctx.cmakeBuildPreset) : null
+                if (testConfigPreset && testConfigPreset != buildConfigPreset) {
                     impl.configureAndBuildForTest(preset: params.CMAKE_TEST_PRESET)
                 }
                 impl.testWithPreset(
