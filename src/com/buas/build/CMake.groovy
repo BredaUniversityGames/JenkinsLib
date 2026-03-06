@@ -92,6 +92,11 @@ class CMake implements Serializable {
         return presetList.findAll { !(it.hidden ?: false) }.collect { it.name }
     }
 
+    private static List<String> reorderChoices(List<String> choices, String previous) {
+        if (!previous || !choices.contains(previous)) return choices
+        return [previous] + choices.findAll { it != previous }
+    }
+
     boolean hasPresets() {
         return presets.configurePresets || presets.buildPresets
     }
@@ -100,7 +105,7 @@ class CMake implements Serializable {
         return presets
     }
 
-    def pipelineParams(Map overrides = [:]) {
+    def buildPipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
         def sourceDir = overrides.CMAKE_SOURCE_DIR ?: prev.CMAKE_SOURCE_DIR ?: '.'
 
@@ -114,12 +119,12 @@ class CMake implements Serializable {
         if (hasPresets()) {
             if (presets.configurePresets) {
                 paramList << steps.choice(name: 'CMAKE_CONFIGURE_PRESET',
-                    choices: presets.configurePresets,
+                    choices: reorderChoices(presets.configurePresets, prev.CMAKE_CONFIGURE_PRESET),
                     description: 'CMake configure preset (from CMakePresets.json)')
             }
             if (presets.buildPresets) {
                 paramList << steps.choice(name: 'CMAKE_BUILD_PRESET',
-                    choices: presets.buildPresets,
+                    choices: reorderChoices(presets.buildPresets, prev.CMAKE_BUILD_PRESET),
                     description: 'CMake build preset (from CMakePresets.json)')
             }
         } else {
@@ -127,10 +132,10 @@ class CMake implements Serializable {
                 steps.string(name: 'CMAKE_BUILD_DIR', defaultValue: overrides.CMAKE_BUILD_DIR ?: prev.CMAKE_BUILD_DIR ?: 'build',
                        description: 'Build output directory'),
                 steps.choice(name: 'CMAKE_GENERATOR',
-                       choices: overrides.CMAKE_GENERATOR_CHOICES ?: ['Ninja', 'Visual Studio 17 2022', 'Visual Studio 16 2019', 'Unix Makefiles'],
+                       choices: reorderChoices(overrides.CMAKE_GENERATOR_CHOICES ?: ['Ninja', 'Visual Studio 17 2022', 'Visual Studio 16 2019', 'Unix Makefiles'], prev.CMAKE_GENERATOR),
                        description: 'CMake generator'),
                 steps.choice(name: 'CMAKE_CONFIG',
-                       choices: overrides.CMAKE_CONFIG_CHOICES ?: ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'],
+                       choices: reorderChoices(overrides.CMAKE_CONFIG_CHOICES ?: ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'], prev.CMAKE_CONFIG),
                        description: 'Build configuration'),
                 steps.string(name: 'CMAKE_PLATFORM', defaultValue: overrides.CMAKE_PLATFORM ?: prev.CMAKE_PLATFORM ?: 'x64',
                        description: 'Target platform')
@@ -148,16 +153,17 @@ class CMake implements Serializable {
     }
 
     def testPipelineParams(Map overrides = [:]) {
+        def prev = steps.params ?: [:]
         if (presets.testPresets) {
             return [
                 steps.choice(name: 'CMAKE_TEST_PRESET',
-                    choices: presets.testPresets,
+                    choices: reorderChoices(presets.testPresets, prev.CMAKE_TEST_PRESET),
                     description: 'CTest preset (from CMakePresets.json)')
             ]
         }
         return [
             steps.choice(name: 'CMAKE_TEST_FRAMEWORK',
-                   choices: overrides.CMAKE_TEST_FRAMEWORK_CHOICES ?: ['CTest', 'GoogleTest'],
+                   choices: reorderChoices(overrides.CMAKE_TEST_FRAMEWORK_CHOICES ?: ['CTest', 'GoogleTest'], prev.CMAKE_TEST_FRAMEWORK),
                    description: 'Test framework to use'),
             steps.string(name: 'CMAKE_TEST_EXECUTABLE', defaultValue: overrides.CMAKE_TEST_EXECUTABLE ?: '',
                    description: 'Path to test executable (GoogleTest only)')
@@ -166,18 +172,20 @@ class CMake implements Serializable {
 
     def packagePipelineParams() {
         if (!presets.packagePresets) return []
+        def prev = steps.params ?: [:]
         return [
             steps.choice(name: 'CMAKE_PACKAGE_PRESET',
-                choices: presets.packagePresets,
+                choices: reorderChoices(presets.packagePresets, prev.CMAKE_PACKAGE_PRESET),
                 description: 'CPack preset (from CMakePresets.json)')
         ]
     }
 
     def workflowPipelineParams() {
         if (!presets.workflowPresets) return []
+        def prev = steps.params ?: [:]
         return [
             steps.choice(name: 'CMAKE_WORKFLOW_PRESET',
-                choices: presets.workflowPresets,
+                choices: reorderChoices(presets.workflowPresets, prev.CMAKE_WORKFLOW_PRESET),
                 description: 'CMake workflow preset (from CMakePresets.json)')
         ]
     }

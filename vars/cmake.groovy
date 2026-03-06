@@ -22,7 +22,7 @@ def build(Map overrides = [:]) {
     ModuleRegistry.register(
         category: 'build',
         name: 'CMake Build',
-        params: _impl.pipelineParams(overrides),
+        params: _impl.buildPipelineParams(overrides),
         execute: { params, ctx -> _impl.execute(params, ctx) },
         hasCleanup: false
     )
