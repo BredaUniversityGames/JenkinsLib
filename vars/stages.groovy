@@ -64,6 +64,13 @@ def call(Closure body) {
     properties([parameters(allParams)])
 
     if (params.REFRESH_PARAMETERS) {
+        if (params.CLEAN_WORKSPACE) {
+            node('Windows') {
+                ws("C:\\Jenkins\\${env.JOB_NAME}") {
+                    cleanWs()
+                }
+            }
+        }
         currentBuild.result = 'NOT_BUILT'
         echo "Parameters refreshed. Rebuild with 'Build with Parameters' to run the pipeline."
         return
