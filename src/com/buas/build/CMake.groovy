@@ -56,6 +56,7 @@ class CMake implements Serializable {
 
         def presetsPath = sourceDir == '.' ? 'CMakePresets.json' : "${sourceDir}/CMakePresets.json"
 
+        def presetsContent = ''
         try {
             steps.node('Windows') {
                 steps.withEnv(NO_PROMPT_ENV) {
@@ -63,29 +64,29 @@ class CMake implements Serializable {
                     def cloneCmd = "@git clone --depth 1 --no-checkout -b ${branch} \"${repoUrl}\" \"${tmpDir}\" 2>nul"
                     def showCmd = "@cd /d \"${tmpDir}\" && git show HEAD:${presetsPath}"
                     def cleanupCmd = "@cd /d \"%TEMP%\" && if exist \"${tmpDir}\" rmdir /s /q \"${tmpDir}\" 2>nul"
-                    def output = ''
                     try {
                         if (credId) {
                             steps.withCredentials([steps.gitUsernamePassword(
                                     credentialsId: credId,
                                     gitToolName: 'Default')]) {
                                 steps.bat(script: cloneCmd, returnStatus: true)
-                                output = steps.bat(script: showCmd, returnStdout: true).trim()
+                                presetsContent = steps.bat(script: showCmd, returnStdout: true).trim()
                             }
                         } else {
                             steps.bat(script: cloneCmd, returnStatus: true)
-                            output = steps.bat(script: showCmd, returnStdout: true).trim()
+                            presetsContent = steps.bat(script: showCmd, returnStdout: true).trim()
                         }
                     } finally {
                         steps.bat(script: cleanupCmd, returnStatus: true)
-                    }
-                    if (output) {
-                        parsePresets(output)
                     }
                 }
             }
         } catch (Exception e) {
             steps.echo "Note: Could not fetch CMakePresets.json from ${repoUrl}: ${e.message}"
+        }
+
+        if (presetsContent) {
+            parsePresets(presetsContent)
         }
 
         return presets
