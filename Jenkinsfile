@@ -23,10 +23,13 @@ stages {
         // ── Build Engine (pick one) ──
         ue5.build()
         // vs.build()
+        // cmake.build()
+        // cmake.workflow()
 
         // ── Testing (pick one, must match build engine) ──
         // ue5.test()
         // vs.test()
+        // cmake.test()
 
         // ── Code Review ──
         // swarm.review()
@@ -39,6 +42,7 @@ stages {
         // }
         // itch.deploy()
         // epic.deploy()
+        // cmake.pack()
 
         // ── Debug Symbols ──
         // sentry.upload()

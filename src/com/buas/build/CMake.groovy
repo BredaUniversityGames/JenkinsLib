@@ -201,7 +201,7 @@ class CMake implements Serializable {
                 steps.string(name: 'CMAKE_BUILD_DIR', defaultValue: overrides.CMAKE_BUILD_DIR ?: prev.CMAKE_BUILD_DIR ?: 'build',
                        description: 'Build output directory'),
                 steps.choice(name: 'CMAKE_GENERATOR',
-                       choices: reorderChoices(overrides.CMAKE_GENERATOR_CHOICES ?: ['Ninja', 'Visual Studio 17 2022', 'Visual Studio 16 2019', 'Unix Makefiles'], prev.CMAKE_GENERATOR),
+                       choices: reorderChoices(overrides.CMAKE_GENERATOR_CHOICES ?: ['Ninja', 'Visual Studio 18 2026', 'Visual Studio 17 2022', 'Visual Studio 16 2019', 'Unix Makefiles'], prev.CMAKE_GENERATOR),
                        description: 'CMake generator'),
                 steps.choice(name: 'CMAKE_CONFIG',
                        choices: reorderChoices(overrides.CMAKE_CONFIG_CHOICES ?: ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'], prev.CMAKE_CONFIG),

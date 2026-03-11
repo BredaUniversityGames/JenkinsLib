@@ -1,6 +1,6 @@
 # JenkinsLib
 
-A Jenkins Shared Library for Breda University of Applied Sciences game development projects. Provides a modular, composable pipeline that supports UE5 and Visual Studio builds with multiple deployment targets.
+A Jenkins Shared Library for Breda University of Applied Sciences game development projects. Provides a modular, composable pipeline that supports UE5, Visual Studio, and CMake builds with multiple deployment targets.
 
 Credit to [DavidtKate/JenkinsSharedLib](https://github.com/DavidtKate/JenkinsSharedLib) and [Sigma-Erebus/JenkinsLib](https://github.com/Sigma-Erebus/JenkinsLib) for providing part of the foundation upon which this is built.
 
@@ -57,8 +57,8 @@ See the **[Wiki](../../wiki)** for full documentation:
 | Category | Stages |
 | --- | --- |
 | Version Control | [perforce.sync()](../../wiki/Perforce), [git.sync()](../../wiki/Git) |
-| Build | [ue5.build()](../../wiki/Build-UE5), [vs.build()](../../wiki/Build-VS) |
-| Testing | [ue5.test()](../../wiki/Test-UE5), [vs.test()](../../wiki/Test-VS) |
+| Build | [ue5.build()](../../wiki/Build-UE5), [vs.build()](../../wiki/Build-VS), [cmake.build()](../../wiki/Build-CMake) |
+| Testing | [ue5.test()](../../wiki/Test-UE5), [vs.test()](../../wiki/Test-VS), [cmake.test()](../../wiki/Test-CMake) |
 | Deployment | [steam.deploy()](../../wiki/Steam), [itch.deploy()](../../wiki/Itch), [gdrive.deploy()](../../wiki/GDrive), [epic.deploy()](../../wiki/Epic) |
 | Code Review | [swarm.review()](../../wiki/Swarm) |
 | Debug Symbols | [sentry.upload()](../../wiki/Sentry) |
