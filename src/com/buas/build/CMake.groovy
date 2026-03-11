@@ -1,18 +1,19 @@
 package com.buas.build
 
 import groovy.json.JsonSlurper
+import com.buas.vcs.Git
+import com.buas.vcs.Perforce
 
 /**
  * CMake build module.
  * Supports both manual flag-based builds and CMakePresets.json preset-based builds.
- * Fetches CMakePresets.json directly from the Git remote (using GIT_REPO_URL and
- * GIT_CREDENTIALS_ID params) to populate preset choices. Falls back to manual
- * generator/config/platform parameters when no presets are found.
+ * Discovers presets from the workspace or by fetching from the VCS remote (Git or
+ * Perforce, detected from pipeline params). Falls back to manual generator/config/
+ * platform parameters when no presets are found.
  */
 class CMake implements Serializable {
     def steps
     private Map presets = [:]
-    private static final NO_PROMPT_ENV = ['GIT_TERMINAL_PROMPT=0', 'GIT_ASKPASS=']
     private static final VSWHERE = '%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe'
     private static final VCVARSALL_ARCH = [
         'x64':   'x64',
@@ -31,7 +32,13 @@ class CMake implements Serializable {
     }
 
     /**
-     * Discover presets from overrides or by fetching CMakePresets.json from the Git remote.
+     * Discover presets from overrides or by reading CMakePresets.json.
+     *
+     * Discovery order:
+     * 1. Override lists (e.g. cmake.build(CMAKE_BUILD_PRESETS: ['debug', 'release']))
+     * 2. Read from workspace (fast path — works when workspace persists between builds)
+     * 3. Fetch from VCS remote (Git or Perforce, detected from pipeline params)
+     *
      * Returns a map with keys: configurePresets, buildPresets, testPresets, packagePresets, workflowPresets.
      */
     Map discoverPresets(String srcDir, Map overrides) {
@@ -46,12 +53,7 @@ class CMake implements Serializable {
             testConfigureMap:   [:]
         ]
 
-        def prev = steps.params ?: [:]
-        def repoUrl = overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: ''
-        def credId = overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: ''
-        def branch = overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main'
-
-        if (!repoUrl) {
+        if (applyOverridePresets(overrides)) {
             return presets
         }
 
@@ -59,31 +61,9 @@ class CMake implements Serializable {
 
         def presetsContent = ''
         try {
-            steps.node('Windows') {
-                steps.withEnv(NO_PROMPT_ENV) {
-                    def tmpDir = "${steps.env.TEMP}\\cmake_presets_${steps.env.BUILD_NUMBER}"
-                    def cloneCmd = "@git clone --depth 1 --no-checkout -b ${branch} \"${repoUrl}\" \"${tmpDir}\" 2>nul"
-                    def showCmd = "@cd /d \"${tmpDir}\" && git show HEAD:${presetsPath}"
-                    def cleanupCmd = "@cd /d \"%TEMP%\" && if exist \"${tmpDir}\" rmdir /s /q \"${tmpDir}\" 2>nul"
-                    try {
-                        if (credId) {
-                            steps.withCredentials([steps.gitUsernamePassword(
-                                    credentialsId: credId,
-                                    gitToolName: 'Default')]) {
-                                steps.bat(script: cloneCmd, returnStatus: true)
-                                presetsContent = steps.bat(script: showCmd, returnStdout: true).trim()
-                            }
-                        } else {
-                            steps.bat(script: cloneCmd, returnStatus: true)
-                            presetsContent = steps.bat(script: showCmd, returnStdout: true).trim()
-                        }
-                    } finally {
-                        steps.bat(script: cleanupCmd, returnStatus: true)
-                    }
-                }
-            }
+            presetsContent = fetchFileContent(presetsPath, overrides)
         } catch (Exception e) {
-            steps.echo "Note: Could not fetch CMakePresets.json from ${repoUrl}: ${e.message}"
+            steps.echo "Note: Could not discover presets from ${presetsPath}: ${e.message}"
         }
 
         if (presetsContent) {
@@ -91,6 +71,59 @@ class CMake implements Serializable {
         }
 
         return presets
+    }
+
+    private boolean applyOverridePresets(Map overrides) {
+        def found = false
+        ['configure', 'build', 'test', 'package', 'workflow'].each { type ->
+            def key = "CMAKE_${type.toUpperCase()}_PRESETS"
+            if (overrides[key]) {
+                presets["${type}Presets"] = overrides[key] as List<String>
+                found = true
+            }
+        }
+        return found
+    }
+
+    private String fetchFileContent(String path, Map overrides) {
+        def content = ''
+        steps.node('Windows') {
+            steps.ws("C:\\Jenkins\\${steps.env.JOB_NAME}") {
+                if (steps.fileExists(path)) {
+                    content = steps.readFile(file: path, encoding: 'UTF-8').trim()
+                }
+            }
+            if (!content) {
+                content = fetchFromVcs(path, overrides)
+            }
+        }
+        return content
+    }
+
+    private String fetchFromVcs(String path, Map overrides) {
+        def prev = steps.params ?: [:]
+
+        def repoUrl = overrides.GIT_REPO_URL ?: prev.GIT_REPO_URL ?: ''
+        if (repoUrl) {
+            return new Git(steps).fetchFile(
+                path:          path,
+                url:           repoUrl,
+                credentialsId: overrides.GIT_CREDENTIALS_ID ?: prev.GIT_CREDENTIALS_ID ?: '',
+                branch:        overrides.GIT_BRANCH ?: prev.GIT_BRANCH ?: 'main'
+            )
+        }
+
+        def p4Cred = overrides.P4_CREDENTIAL ?: prev.P4_CREDENTIAL ?: ''
+        if (p4Cred) {
+            return new Perforce(steps).fetchFile(
+                path:       path,
+                credential: p4Cred,
+                host:       overrides.P4_HOST ?: prev.P4_HOST ?: '',
+                workspace:  overrides.P4_WORKSPACE ?: prev.P4_WORKSPACE ?: ''
+            )
+        }
+
+        return ''
     }
 
     private void parsePresets(String content) {

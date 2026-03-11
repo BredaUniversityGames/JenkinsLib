@@ -120,4 +120,39 @@ class Git implements Serializable {
     def getCommitMessage() {
         return steps.bat(script: '@git log -1 --pretty=format:%%s', returnStdout: true).trim().split('\n').last().trim()
     }
+
+    /**
+     * Fetch a single file from the remote without a full checkout.
+     * Shallow-clones into a temp directory, reads the file via git show, then cleans up.
+     */
+    String fetchFile(Map config) {
+        def path   = config.path
+        def url    = config.url
+        def credId = config.credentialsId ?: ''
+        def branch = config.branch ?: 'main'
+
+        def content = ''
+        steps.withEnv(NO_PROMPT_ENV) {
+            def tmpDir     = "${steps.env.TEMP}\\git_fetch_${steps.env.BUILD_NUMBER}"
+            def cloneCmd   = "@git clone --depth 1 --no-checkout -b ${branch} \"${url}\" \"${tmpDir}\" 2>nul"
+            def showCmd    = "@cd /d \"${tmpDir}\" && git show HEAD:${path}"
+            def cleanupCmd = "@cd /d \"%TEMP%\" && if exist \"${tmpDir}\" rmdir /s /q \"${tmpDir}\" 2>nul"
+            try {
+                if (credId) {
+                    steps.withCredentials([steps.gitUsernamePassword(
+                            credentialsId: credId,
+                            gitToolName: 'Default')]) {
+                        steps.bat(script: cloneCmd, returnStatus: true)
+                        content = steps.bat(script: showCmd, returnStdout: true).trim()
+                    }
+                } else {
+                    steps.bat(script: cloneCmd, returnStatus: true)
+                    content = steps.bat(script: showCmd, returnStdout: true).trim()
+                }
+            } finally {
+                steps.bat(script: cleanupCmd, returnStatus: true)
+            }
+        }
+        return content
+    }
 }

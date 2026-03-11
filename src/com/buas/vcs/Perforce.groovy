@@ -188,6 +188,29 @@ class Perforce implements Serializable {
         p4s.run('revert', '-c', 'default', '//...')
     }
 
+    /**
+     * Fetch a single file from the depot using p4 print.
+     * Uses the workspace view mapping to resolve the depot path.
+     */
+    String fetchFile(Map config) {
+        def path       = config.path
+        def credential = config.credential
+        def host       = config.host ?: 'ssl:perforce.buas.nl:1666'
+        def workspace  = config.workspace
+        if (!workspace) return ''
+
+        def content = ''
+        steps.withCredentials([steps.usernamePassword(
+                credentialsId: credential,
+                passwordVariable: 'P4PASS',
+                usernameVariable: 'P4USER')]) {
+            steps.bat(script: "@p4 -p ${host} trust -y 2>nul", returnStatus: true)
+            content = steps.bat(script: "@p4 -p ${host} -u %P4USER% -P %P4PASS% -c ${workspace} print -q \"//${workspace}/${path}\"",
+                returnStdout: true).trim()
+        }
+        return content
+    }
+
     private def templateSource(String workspace) {
         return steps.templateSource(workspace)
     }
