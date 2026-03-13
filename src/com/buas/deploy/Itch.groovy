@@ -14,18 +14,21 @@ class Itch implements Serializable {
     def pipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
         return [
-            steps.string(name: 'ITCH_BUTLER_PATH', defaultValue: overrides.ITCH_BUTLER_PATH ?: prev.ITCH_BUTLER_PATH ?: '',
-                   description: 'Path to Butler executable'),
-            steps.string(name: 'ITCH_CREDENTIALS_ID', defaultValue: overrides.ITCH_CREDENTIALS_ID ?: prev.ITCH_CREDENTIALS_ID ?: '',
-                   description: 'Jenkins credential ID for Butler API key'),
+            steps.credentials(name: 'ITCH_CREDENTIALS_ID', defaultValue: overrides.ITCH_CREDENTIALS_ID ?: prev.ITCH_CREDENTIALS_ID ?: '',
+                   credentialType: 'org.jenkinsci.plugins.plaincredentials.StringCredentials',
+                   description: 'Jenkins credential for Butler API key (Secret text)'),
             steps.string(name: 'ITCH_TARGET', defaultValue: overrides.ITCH_TARGET ?: prev.ITCH_TARGET ?: '',
                    description: 'itch.io target (user/game:channel)')
         ]
     }
 
     def execute(Map params, Map ctx) {
+        def butlerPath = steps.env.ITCH_BUTLER_PATH
+        if (!butlerPath) {
+            steps.error("ITCH_BUTLER_PATH environment variable is not set. Configure it in Manage Jenkins > Nodes > (node) > Environment variables.")
+        }
         deploy(
-            butlerPath:    params.ITCH_BUTLER_PATH,
+            butlerPath:    butlerPath,
             credentialsId: params.ITCH_CREDENTIALS_ID,
             source:        ctx.outputDir,
             target:        params.ITCH_TARGET,
