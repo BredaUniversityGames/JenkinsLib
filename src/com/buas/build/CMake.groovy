@@ -49,11 +49,13 @@ class CMake implements Serializable {
             testPresets:        [],
             packagePresets:     [],
             workflowPresets:    [],
-            buildConfigureMap:      [:],
-            buildConfigurationMap:  [:],
-            testConfigureMap:       [:],
-            packageConfigureMap:    [:],
-            packageConfigurationsMap: [:]
+            buildConfigureMap:        [:],
+            buildConfigurationMap:   [:],
+            testConfigureMap:        [:],
+            packageConfigureMap:     [:],
+            packageConfigurationsMap: [:],
+            packageOutputDirMap:     [:],
+            configureBinaryDirMap:   [:]
         ]
 
         if (applyOverridePresets(overrides)) {
@@ -133,6 +135,17 @@ class CMake implements Serializable {
         def json = new JsonSlurper().parseText(content)
         presets.configurePresets = extractPresetNames(json.configurePresets)
         presets.buildPresets     = extractPresetNames(json.buildPresets)
+
+        // Store configure preset → binaryDir mapping
+        def configureBinaryDirMap = [:]
+        def rawConfigurePresets = json.configurePresets ?: []
+        for (int i = 0; i < rawConfigurePresets.size(); i++) {
+            def cp = rawConfigurePresets[i]
+            if (!(cp.hidden ?: false) && cp.binaryDir) {
+                configureBinaryDirMap[cp.name] = cp.binaryDir
+            }
+        }
+        presets.configureBinaryDirMap = configureBinaryDirMap
         presets.testPresets      = extractPresetNames(json.testPresets)
         presets.packagePresets   = extractPresetNames(json.packagePresets)
         presets.workflowPresets  = extractPresetNames(json.workflowPresets)
@@ -167,6 +180,7 @@ class CMake implements Serializable {
         // Store package preset → configurePreset and configurations mappings
         def packageConfigMap = [:]
         def packageConfigurationsMap = [:]
+        def packageOutputDirMap = [:]
         def rawPackagePresets = json.packagePresets ?: []
         for (int i = 0; i < rawPackagePresets.size(); i++) {
             def pp = rawPackagePresets[i]
@@ -175,10 +189,14 @@ class CMake implements Serializable {
                 if (pp.configurations) {
                     packageConfigurationsMap[pp.name] = pp.configurations as List<String>
                 }
+                if (pp.outputDirectory) {
+                    packageOutputDirMap[pp.name] = pp.outputDirectory
+                }
             }
         }
         presets.packageConfigureMap = packageConfigMap
         presets.packageConfigurationsMap = packageConfigurationsMap
+        presets.packageOutputDirMap = packageOutputDirMap
     }
 
     private static List<String> extractPresetNames(List presetList) {
@@ -368,6 +386,15 @@ class CMake implements Serializable {
 
     String getPackageConfigurePreset(String packagePreset) {
         return presets.packageConfigureMap[packagePreset]
+    }
+
+    String getPackageOutputDir(String packagePreset) {
+        def outputDir = presets.packageOutputDirMap[packagePreset]
+        if (outputDir) return outputDir
+        // CPack defaults to the configure preset's binaryDir
+        def configPreset = presets.packageConfigureMap[packagePreset]
+        if (configPreset) return presets.configureBinaryDirMap[configPreset]
+        return null
     }
 
     private List<String> findBuildPresets(String configPreset, List<String> configurations) {

@@ -91,6 +91,7 @@ def pack(Map overrides = [:]) {
                     impl.configureAndBuildForPack(preset: params.CMAKE_PACKAGE_PRESET)
                 }
                 impl.packageWithPreset(preset: params.CMAKE_PACKAGE_PRESET)
+                ctx.outputDir = impl.getPackageOutputDir(params.CMAKE_PACKAGE_PRESET)
             } else {
                 if (!ctx.buildEngine) {
                     error "cmake.pack() requires cmake.build() to run first when not using presets"
@@ -103,6 +104,7 @@ def pack(Map overrides = [:]) {
                     generator: params.CMAKE_CPACK_GENERATOR,
                     args:      params.CMAKE_CPACK_ARGS
                 )
+                ctx.outputDir = "${buildDir}/_packages"
             }
         },
         hasCleanup: false
