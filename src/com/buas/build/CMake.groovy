@@ -49,9 +49,11 @@ class CMake implements Serializable {
             testPresets:        [],
             packagePresets:     [],
             workflowPresets:    [],
-            buildConfigureMap:   [:],
-            testConfigureMap:    [:],
-            packageConfigureMap: [:]
+            buildConfigureMap:      [:],
+            buildConfigurationMap:  [:],
+            testConfigureMap:       [:],
+            packageConfigureMap:    [:],
+            packageConfigurationsMap: [:]
         ]
 
         if (applyOverridePresets(overrides)) {
@@ -135,16 +137,21 @@ class CMake implements Serializable {
         presets.packagePresets   = extractPresetNames(json.packagePresets)
         presets.workflowPresets  = extractPresetNames(json.workflowPresets)
 
-        // Store build preset → configurePreset mapping for automatic configure step
+        // Store build preset → configurePreset and configuration mappings
         def buildConfigMap = [:]
+        def buildConfigurationMap = [:]
         def rawBuildPresets = json.buildPresets ?: []
         for (int i = 0; i < rawBuildPresets.size(); i++) {
             def bp = rawBuildPresets[i]
             if (!(bp.hidden ?: false) && bp.configurePreset) {
                 buildConfigMap[bp.name] = bp.configurePreset
+                if (bp.configuration) {
+                    buildConfigurationMap[bp.name] = bp.configuration
+                }
             }
         }
         presets.buildConfigureMap = buildConfigMap
+        presets.buildConfigurationMap = buildConfigurationMap
 
         // Store test preset → configurePreset mapping for configure+build+test flow
         def testConfigMap = [:]
@@ -157,16 +164,21 @@ class CMake implements Serializable {
         }
         presets.testConfigureMap = testConfigMap
 
-        // Store package preset → configurePreset mapping for configure+build+pack flow
+        // Store package preset → configurePreset and configurations mappings
         def packageConfigMap = [:]
+        def packageConfigurationsMap = [:]
         def rawPackagePresets = json.packagePresets ?: []
         for (int i = 0; i < rawPackagePresets.size(); i++) {
             def pp = rawPackagePresets[i]
             if (!(pp.hidden ?: false) && pp.configurePreset) {
                 packageConfigMap[pp.name] = pp.configurePreset
+                if (pp.configurations) {
+                    packageConfigurationsMap[pp.name] = pp.configurations as List<String>
+                }
             }
         }
         presets.packageConfigureMap = packageConfigMap
+        presets.packageConfigurationsMap = packageConfigurationsMap
     }
 
     private static List<String> extractPresetNames(List presetList) {
@@ -358,15 +370,29 @@ class CMake implements Serializable {
         return presets.packageConfigureMap[packagePreset]
     }
 
-    private void configureAndBuildIfNeeded(String configPreset) {
+    private List<String> findBuildPresets(String configPreset, List<String> configurations = null) {
+        def matches = presets.buildConfigureMap.findAll { it.value == configPreset }.collect { it.key }
+        if (!configurations) {
+            return matches
+        }
+        return matches.findAll { bp ->
+            def bpConfig = presets.buildConfigurationMap[bp]
+            !bpConfig || configurations.contains(bpConfig)
+        }
+    }
+
+    private void configureAndBuildIfNeeded(String configPreset, List<String> configurations = null) {
         configureWithPreset(preset: configPreset)
 
-        // Find a build preset that targets this configure preset
-        def buildPreset = presets.buildConfigureMap.find { it.value == configPreset }?.key
-        if (buildPreset) {
-            buildWithPreset(preset: buildPreset)
+        def buildPresets = findBuildPresets(configPreset, configurations)
+        if (buildPresets) {
+            for (int i = 0; i < buildPresets.size(); i++) {
+                buildWithPreset(preset: buildPresets[i])
+            }
         } else {
-            steps.error "No build preset found for configure preset '${configPreset}' in CMakePresets.json"
+            steps.error "No build preset found for configure preset '${configPreset}'" +
+                (configurations ? " with configurations ${configurations}" : '') +
+                ' in CMakePresets.json'
         }
     }
 
@@ -383,7 +409,8 @@ class CMake implements Serializable {
         if (!configPreset) {
             steps.error "Package preset '${config.preset}' has no configurePreset defined in CMakePresets.json"
         }
-        configureAndBuildIfNeeded(configPreset)
+        def configurations = presets.packageConfigurationsMap[config.preset]
+        configureAndBuildIfNeeded(configPreset, configurations)
     }
 
     def testWithPreset(Map config) {
