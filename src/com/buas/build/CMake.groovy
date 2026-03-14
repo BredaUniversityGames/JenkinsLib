@@ -361,12 +361,12 @@ class CMake implements Serializable {
     private void configureAndBuildIfNeeded(String configPreset) {
         configureWithPreset(preset: configPreset)
 
-        // Use matching build preset if available, otherwise build from the configure preset's build dir
-        if (presets.buildPresets.contains(configPreset)) {
-            buildWithPreset(preset: configPreset)
+        // Find a build preset that targets this configure preset
+        def buildPreset = presets.buildConfigureMap.find { it.value == configPreset }?.key
+        if (buildPreset) {
+            buildWithPreset(preset: buildPreset)
         } else {
-            batWithVsEnv(label: "CMake build (${configPreset})",
-                script: "cmake --build \"build/${configPreset}\"")
+            steps.error "No build preset found for configure preset '${configPreset}' in CMakePresets.json"
         }
     }
 
