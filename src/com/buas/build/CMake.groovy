@@ -542,13 +542,18 @@ class CMake implements Serializable {
         return packagesDir
     }
 
+    private static final String CPACK_PKG_PREFIX = 'CPack: - package: '
+    private static final String CPACK_PKG_SUFFIX = ' generated.'
+
     private void collectPackages(String cpackOutput, String packagesDir) {
         steps.bat(script: "if not exist \"${packagesDir}\" mkdir \"${packagesDir}\"", returnStatus: true)
         def lines = cpackOutput.split('\n')
         for (int i = 0; i < lines.size(); i++) {
-            def m = lines[i] =~ /CPack: - package: (.+) generated\./
-            if (m) {
-                def pkg = m[0][1].trim()
+            def line = lines[i].trim()
+            int start = line.indexOf(CPACK_PKG_PREFIX)
+            int end = line.indexOf(CPACK_PKG_SUFFIX)
+            if (start >= 0 && end > start) {
+                def pkg = line.substring(start + CPACK_PKG_PREFIX.length(), end).trim()
                 steps.bat(label: "Collect ${pkg}",
                     script: "copy \"${pkg}\" \"${packagesDir}\\\"")
             }
