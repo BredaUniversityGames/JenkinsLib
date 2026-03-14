@@ -49,8 +49,9 @@ class CMake implements Serializable {
             testPresets:        [],
             packagePresets:     [],
             workflowPresets:    [],
-            buildConfigureMap:  [:],
-            testConfigureMap:   [:]
+            buildConfigureMap:   [:],
+            testConfigureMap:    [:],
+            packageConfigureMap: [:]
         ]
 
         if (applyOverridePresets(overrides)) {
@@ -155,6 +156,17 @@ class CMake implements Serializable {
             }
         }
         presets.testConfigureMap = testConfigMap
+
+        // Store package preset → configurePreset mapping for configure+build+pack flow
+        def packageConfigMap = [:]
+        def rawPackagePresets = json.packagePresets ?: []
+        for (int i = 0; i < rawPackagePresets.size(); i++) {
+            def pp = rawPackagePresets[i]
+            if (!(pp.hidden ?: false) && pp.configurePreset) {
+                packageConfigMap[pp.name] = pp.configurePreset
+            }
+        }
+        presets.packageConfigureMap = packageConfigMap
     }
 
     private static List<String> extractPresetNames(List presetList) {
@@ -342,13 +354,11 @@ class CMake implements Serializable {
         return presets.testConfigureMap[testPreset]
     }
 
-    def configureAndBuildForTest(Map config) {
-        def testPreset = config.preset
-        def configPreset = presets.testConfigureMap[testPreset]
-        if (!configPreset) {
-            steps.error "Test preset '${testPreset}' has no configurePreset defined in CMakePresets.json"
-        }
+    String getPackageConfigurePreset(String packagePreset) {
+        return presets.packageConfigureMap[packagePreset]
+    }
 
+    private void configureAndBuildIfNeeded(String configPreset) {
         configureWithPreset(preset: configPreset)
 
         // Use matching build preset if available, otherwise build from the configure preset's build dir
@@ -358,6 +368,22 @@ class CMake implements Serializable {
             batWithVsEnv(label: "CMake build (${configPreset})",
                 script: "cmake --build \"build/${configPreset}\"")
         }
+    }
+
+    def configureAndBuildForTest(Map config) {
+        def configPreset = presets.testConfigureMap[config.preset]
+        if (!configPreset) {
+            steps.error "Test preset '${config.preset}' has no configurePreset defined in CMakePresets.json"
+        }
+        configureAndBuildIfNeeded(configPreset)
+    }
+
+    def configureAndBuildForPack(Map config) {
+        def configPreset = presets.packageConfigureMap[config.preset]
+        if (!configPreset) {
+            steps.error "Package preset '${config.preset}' has no configurePreset defined in CMakePresets.json"
+        }
+        configureAndBuildIfNeeded(configPreset)
     }
 
     def testWithPreset(Map config) {

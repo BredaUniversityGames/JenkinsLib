@@ -84,8 +84,17 @@ def pack(Map overrides = [:]) {
         params: packParams,
         execute: { params, ctx ->
             if (params.CMAKE_PACKAGE_PRESET) {
+                // Configure+build if not already done for this configure preset
+                def packConfigPreset = impl.getPackageConfigurePreset(params.CMAKE_PACKAGE_PRESET)
+                def buildConfigPreset = ctx.cmakeBuildPreset ? impl.getBuildConfigurePreset(ctx.cmakeBuildPreset) : null
+                if (packConfigPreset && packConfigPreset != buildConfigPreset) {
+                    impl.configureAndBuildForPack(preset: params.CMAKE_PACKAGE_PRESET)
+                }
                 impl.packageWithPreset(preset: params.CMAKE_PACKAGE_PRESET)
             } else {
+                if (!ctx.buildEngine) {
+                    error "cmake.pack() requires cmake.build() to run first when not using presets"
+                }
                 def buildDir = ctx.cmakeBuildDir ?: params.CMAKE_BUILD_DIR ?: 'build'
                 def buildConfig = ctx.buildConfig ?: params.CMAKE_CONFIG ?: 'Debug'
                 impl.pack(
