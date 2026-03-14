@@ -77,7 +77,7 @@ def test(Map overrides = [:]) {
 
 def pack(Map overrides = [:]) {
     def impl = getImpl()
-    def packParams = impl.packagePipelineParams()
+    def packParams = impl.packagePipelineParams(overrides)
     ModuleRegistry.register(
         category: 'deploy',
         name: 'CMake Package',
@@ -102,7 +102,7 @@ def pack(Map overrides = [:]) {
 
 def workflow(Map overrides = [:]) {
     def impl = getImpl()
-    def workflowParams = impl.workflowPipelineParams()
+    def workflowParams = impl.workflowPipelineParams(overrides)
     if (!workflowParams) {
         log.warning("cmake.workflow() requires workflow presets in CMakePresets.json")
         return

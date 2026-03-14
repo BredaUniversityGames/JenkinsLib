@@ -238,8 +238,12 @@ class CMake implements Serializable {
         return []
     }
 
-    def packagePipelineParams() {
+    def packagePipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
+        if (!presets.buildPresets && !presets.packagePresets) {
+            def sourceDir = overrides.CMAKE_SOURCE_DIR ?: prev.CMAKE_SOURCE_DIR ?: '.'
+            discoverPresets(sourceDir, overrides)
+        }
         if (presets.packagePresets) {
             return [
                 steps.choice(name: 'CMAKE_PACKAGE_PRESET',
@@ -256,9 +260,13 @@ class CMake implements Serializable {
         ]
     }
 
-    def workflowPipelineParams() {
-        if (!presets.workflowPresets) return []
+    def workflowPipelineParams(Map overrides = [:]) {
         def prev = steps.params ?: [:]
+        if (!presets.buildPresets && !presets.workflowPresets) {
+            def sourceDir = overrides.CMAKE_SOURCE_DIR ?: prev.CMAKE_SOURCE_DIR ?: '.'
+            discoverPresets(sourceDir, overrides)
+        }
+        if (!presets.workflowPresets) return []
         return [
             steps.choice(name: 'CMAKE_WORKFLOW_PRESET',
                 choices: reorderChoices(presets.workflowPresets, prev.CMAKE_WORKFLOW_PRESET),
