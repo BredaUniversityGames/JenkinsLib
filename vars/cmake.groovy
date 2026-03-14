@@ -79,7 +79,7 @@ def pack(Map overrides = [:]) {
     def impl = getImpl()
     def packParams = impl.packagePipelineParams(overrides)
     ModuleRegistry.register(
-        category: 'deploy',
+        category: 'pack',
         name: 'CMake Package',
         params: packParams,
         execute: { params, ctx ->

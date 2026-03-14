@@ -96,7 +96,7 @@ def call(Closure body) {
     }
 
     // Category execution order
-    def categoryOrder = ['vcs', 'build', 'test', 'review', 'deploy', 'symbols']
+    def categoryOrder = ['vcs', 'build', 'test', 'review', 'pack', 'deploy', 'symbols']
 
     node('Windows') {
         ws("C:\\Jenkins\\${env.JOB_NAME}") {
