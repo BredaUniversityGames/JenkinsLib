@@ -470,7 +470,7 @@ class CMake implements Serializable {
         def packagesDir = config.outputDir ?: '_packages'
 
         def output = steps.bat(label: "CPack (preset: ${preset})",
-            script: "cpack --preset \"${preset}\"",
+            script: "@cpack --preset \"${preset}\"",
             returnStdout: true).trim()
 
         collectPackages(output, packagesDir)
@@ -529,7 +529,7 @@ class CMake implements Serializable {
         def extraArgs = config.args ?: ''
         def packagesDir = config.outputDir ?: '_packages'
 
-        def cmd = "cpack -G \"${generator}\" -B \"${buildDir}/_cpack_tmp\" -C ${buildConfig}"
+        def cmd = "@cpack -G \"${generator}\" -B \"${buildDir}/_cpack_tmp\" -C ${buildConfig}"
 
         if (extraArgs) {
             cmd += " ${extraArgs}"
@@ -554,6 +554,7 @@ class CMake implements Serializable {
             int end = line.indexOf(CPACK_PKG_SUFFIX)
             if (start >= 0 && end > start) {
                 def pkg = line.substring(start + CPACK_PKG_PREFIX.length(), end).trim()
+                pkg = pkg.replace('/', '\\')
                 steps.bat(label: "Collect ${pkg}",
                     script: "copy \"${pkg}\" \"${packagesDir}\\\"")
             }
