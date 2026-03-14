@@ -389,12 +389,24 @@ class CMake implements Serializable {
     }
 
     String getPackageOutputDir(String packagePreset) {
-        def outputDir = presets.packageOutputDirMap[packagePreset]
-        if (outputDir) return outputDir
-        // CPack defaults to the configure preset's binaryDir
         def configPreset = presets.packageConfigureMap[packagePreset]
-        if (configPreset) return presets.configureBinaryDirMap[configPreset]
+        def outputDir = presets.packageOutputDirMap[packagePreset]
+        if (outputDir) {
+            return resolveCMakeVars(outputDir, packagePreset)
+        }
+        // CPack defaults to the configure preset's binaryDir
+        if (configPreset) {
+            def binaryDir = presets.configureBinaryDirMap[configPreset]
+            if (binaryDir) return resolveCMakeVars(binaryDir, configPreset)
+        }
         return null
+    }
+
+    private static String resolveCMakeVars(String path, String presetName) {
+        return path
+            .replace('${sourceDir}', '.')
+            .replace('${presetName}', presetName)
+            .replace('${sourceParentDir}', '..')
     }
 
     private List<String> findBuildPresets(String configPreset, List<String> configurations) {

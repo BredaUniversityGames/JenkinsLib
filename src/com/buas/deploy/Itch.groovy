@@ -32,7 +32,7 @@ class Itch implements Serializable {
             credentialsId: params.ITCH_CREDENTIALS_ID,
             source:        ctx.outputDir,
             target:        params.ITCH_TARGET,
-            platform:      ctx.buildPlatform ?: 'Win64'
+            platform:      ctx.buildPlatform ?: ''
         )
     }
 
@@ -41,14 +41,17 @@ class Itch implements Serializable {
         def credentialsId = config.credentialsId
         def source = config.source
         def target = config.target
-        def platform = config.platform ?: 'Win64'
+        def platform = config.platform ?: ''
 
-        def platformDir = steps.utilWin.platformOutputDir(platform)
-        def uploadSource = "${source}\\${platformDir}"
+        def uploadSource = source
+        if (platform) {
+            def platformDir = steps.utilWin.platformOutputDir(platform)
+            uploadSource = "${source}\\${platformDir}"
+        }
 
-        steps.withCredentials([steps.string(credentialsId: credentialsId, variable: 'BUTLER_KEY')]) {
+        steps.withCredentials([steps.string(credentialsId: credentialsId, variable: 'BUTLER_API_KEY')]) {
             steps.bat(label: "Upload to itch.io",
-                script: "\"${butlerPath}\" --identity=%BUTLER_KEY% push \"${uploadSource}\" ${target}")
+                script: "\"${butlerPath}\" push \"${uploadSource}\" ${target}")
         }
     }
 }
