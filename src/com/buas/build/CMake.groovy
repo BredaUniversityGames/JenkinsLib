@@ -88,13 +88,13 @@ class CMake implements Serializable {
     private String fetchFileContent(String path, Map overrides) {
         def content = ''
         steps.node('Windows') {
-            steps.ws("C:\\Jenkins\\${steps.env.JOB_NAME}") {
-                if (steps.fileExists(path)) {
-                    content = steps.readFile(file: path, encoding: 'UTF-8').trim()
-                }
-            }
+            content = fetchFromVcs(path, overrides)
             if (!content) {
-                content = fetchFromVcs(path, overrides)
+                steps.ws("C:\\Jenkins\\${steps.env.JOB_NAME}") {
+                    if (steps.fileExists(path)) {
+                        content = steps.readFile(file: path, encoding: 'UTF-8').trim()
+                    }
+                }
             }
         }
         return content
@@ -239,12 +239,20 @@ class CMake implements Serializable {
     }
 
     def packagePipelineParams() {
-        if (!presets.packagePresets) return []
         def prev = steps.params ?: [:]
+        if (presets.packagePresets) {
+            return [
+                steps.choice(name: 'CMAKE_PACKAGE_PRESET',
+                    choices: reorderChoices(presets.packagePresets, prev.CMAKE_PACKAGE_PRESET),
+                    description: 'CPack preset (from CMakePresets.json)')
+            ]
+        }
         return [
-            steps.choice(name: 'CMAKE_PACKAGE_PRESET',
-                choices: reorderChoices(presets.packagePresets, prev.CMAKE_PACKAGE_PRESET),
-                description: 'CPack preset (from CMakePresets.json)')
+            steps.choice(name: 'CMAKE_CPACK_GENERATOR',
+                choices: reorderChoices(['ZIP', 'NSIS', 'WIX', 'NuGet', '7Z', 'TGZ'], prev.CMAKE_CPACK_GENERATOR),
+                description: 'CPack generator'),
+            steps.string(name: 'CMAKE_CPACK_ARGS', defaultValue: prev.CMAKE_CPACK_ARGS ?: '',
+                description: 'Additional CPack arguments')
         ]
     }
 
@@ -401,6 +409,21 @@ class CMake implements Serializable {
         }
 
         batWithVsEnv(label: "CMake build", script: cmd, arch: platform)
+    }
+
+    def pack(Map config) {
+        def buildDir = config.buildDir ?: 'build'
+        def buildConfig = config.config ?: 'Debug'
+        def generator = config.generator ?: 'ZIP'
+        def extraArgs = config.args ?: ''
+
+        def cmd = "cpack -G \"${generator}\" -B \"${buildDir}/_packages\" -C ${buildConfig}"
+
+        if (extraArgs) {
+            cmd += " ${extraArgs}"
+        }
+
+        steps.bat(label: "CPack (${generator})", script: cmd)
     }
 
     def install(Map config) {
