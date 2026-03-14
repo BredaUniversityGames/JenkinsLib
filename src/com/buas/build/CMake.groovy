@@ -370,15 +370,21 @@ class CMake implements Serializable {
         return presets.packageConfigureMap[packagePreset]
     }
 
-    private List<String> findBuildPresets(String configPreset, List<String> configurations = null) {
-        def matches = presets.buildConfigureMap.findAll { it.value == configPreset }.collect { it.key }
-        if (!configurations) {
-            return matches
+    private List<String> findBuildPresets(String configPreset, List<String> configurations) {
+        def configMap = presets.buildConfigureMap
+        def configurationMap = presets.buildConfigurationMap
+        def result = []
+        def keys = configMap.keySet().toList()
+        for (int i = 0; i < keys.size(); i++) {
+            def bp = keys[i]
+            if (configMap[bp] != configPreset) continue
+            if (configurations) {
+                def bpConfig = configurationMap[bp]
+                if (bpConfig && !configurations.contains(bpConfig)) continue
+            }
+            result.add(bp)
         }
-        return matches.findAll { bp ->
-            def bpConfig = presets.buildConfigurationMap[bp]
-            !bpConfig || configurations.contains(bpConfig)
-        }
+        return result
     }
 
     private void configureAndBuildIfNeeded(String configPreset, List<String> configurations = null) {
