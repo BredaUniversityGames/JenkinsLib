@@ -90,21 +90,19 @@ def pack(Map overrides = [:]) {
                 if (packConfigPreset && packConfigPreset != buildConfigPreset) {
                     impl.configureAndBuildForPack(preset: params.CMAKE_PACKAGE_PRESET)
                 }
-                impl.packageWithPreset(preset: params.CMAKE_PACKAGE_PRESET)
-                ctx.outputDir = impl.getPackageOutputDir(params.CMAKE_PACKAGE_PRESET)
+                ctx.outputDir = impl.packageWithPreset(preset: params.CMAKE_PACKAGE_PRESET)
             } else {
                 if (!ctx.buildEngine) {
                     error "cmake.pack() requires cmake.build() to run first when not using presets"
                 }
                 def buildDir = ctx.cmakeBuildDir ?: params.CMAKE_BUILD_DIR ?: 'build'
                 def buildConfig = ctx.buildConfig ?: params.CMAKE_CONFIG ?: 'Debug'
-                impl.pack(
+                ctx.outputDir = impl.pack(
                     buildDir:  buildDir,
                     config:    buildConfig,
                     generator: params.CMAKE_CPACK_GENERATOR,
                     args:      params.CMAKE_CPACK_ARGS
                 )
-                ctx.outputDir = "${buildDir}/_packages"
             }
         },
         hasCleanup: false

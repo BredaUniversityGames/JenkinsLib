@@ -465,11 +465,16 @@ class CMake implements Serializable {
             script: "ctest --preset \"${preset}\" --output-on-failure --output-junit \"${config.resultsFile ?: 'test_results.xml'}\"")
     }
 
-    def packageWithPreset(Map config) {
+    String packageWithPreset(Map config) {
         def preset = config.preset
+        def packagesDir = config.outputDir ?: '_packages'
 
-        steps.bat(label: "CPack (preset: ${preset})",
-            script: "cpack --preset \"${preset}\"")
+        def output = steps.bat(label: "CPack (preset: ${preset})",
+            script: "cpack --preset \"${preset}\"",
+            returnStdout: true).trim()
+
+        collectPackages(output, packagesDir)
+        return packagesDir
     }
 
     def workflowWithPreset(Map config) {
@@ -517,19 +522,37 @@ class CMake implements Serializable {
         batWithVsEnv(label: "CMake build", script: cmd, arch: platform)
     }
 
-    def pack(Map config) {
+    String pack(Map config) {
         def buildDir = config.buildDir ?: 'build'
         def buildConfig = config.config ?: 'Debug'
         def generator = config.generator ?: 'ZIP'
         def extraArgs = config.args ?: ''
+        def packagesDir = config.outputDir ?: '_packages'
 
-        def cmd = "cpack -G \"${generator}\" -B \"${buildDir}/_packages\" -C ${buildConfig}"
+        def cmd = "cpack -G \"${generator}\" -B \"${buildDir}/_cpack_tmp\" -C ${buildConfig}"
 
         if (extraArgs) {
             cmd += " ${extraArgs}"
         }
 
-        steps.bat(label: "CPack (${generator})", script: cmd)
+        def output = steps.bat(label: "CPack (${generator})", script: cmd,
+            returnStdout: true).trim()
+
+        collectPackages(output, packagesDir)
+        return packagesDir
+    }
+
+    private void collectPackages(String cpackOutput, String packagesDir) {
+        steps.bat(script: "if not exist \"${packagesDir}\" mkdir \"${packagesDir}\"", returnStatus: true)
+        def lines = cpackOutput.split('\n')
+        for (int i = 0; i < lines.size(); i++) {
+            def m = lines[i] =~ /CPack: - package: (.+) generated\./
+            if (m) {
+                def pkg = m[0][1].trim()
+                steps.bat(label: "Collect ${pkg}",
+                    script: "copy \"${pkg}\" \"${packagesDir}\\\"")
+            }
+        }
     }
 
     def install(Map config) {
