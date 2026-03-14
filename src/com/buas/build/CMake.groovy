@@ -467,14 +467,12 @@ class CMake implements Serializable {
 
     String packageWithPreset(Map config) {
         def preset = config.preset
-        def packagesDir = config.outputDir ?: '_packages'
 
         def output = steps.bat(label: "CPack (preset: ${preset})",
             script: "@cpack --preset \"${preset}\"",
             returnStdout: true).trim()
 
-        collectPackages(output, packagesDir)
-        return packagesDir
+        return parsePackagePath(output)
     }
 
     def workflowWithPreset(Map config) {
@@ -527,9 +525,8 @@ class CMake implements Serializable {
         def buildConfig = config.config ?: 'Debug'
         def generator = config.generator ?: 'ZIP'
         def extraArgs = config.args ?: ''
-        def packagesDir = config.outputDir ?: '_packages'
 
-        def cmd = "@cpack -G \"${generator}\" -B \"${buildDir}/_cpack_tmp\" -C ${buildConfig}"
+        def cmd = "@cpack -G \"${generator}\" -B \"${buildDir}\" -C ${buildConfig}"
 
         if (extraArgs) {
             cmd += " ${extraArgs}"
@@ -538,27 +535,23 @@ class CMake implements Serializable {
         def output = steps.bat(label: "CPack (${generator})", script: cmd,
             returnStdout: true).trim()
 
-        collectPackages(output, packagesDir)
-        return packagesDir
+        return parsePackagePath(output)
     }
 
     private static final String CPACK_PKG_PREFIX = 'CPack: - package: '
     private static final String CPACK_PKG_SUFFIX = ' generated.'
 
-    private void collectPackages(String cpackOutput, String packagesDir) {
-        steps.bat(script: "if not exist \"${packagesDir}\" mkdir \"${packagesDir}\"", returnStatus: true)
+    private static String parsePackagePath(String cpackOutput) {
         def lines = cpackOutput.split('\n')
         for (int i = 0; i < lines.size(); i++) {
             def line = lines[i].trim()
             int start = line.indexOf(CPACK_PKG_PREFIX)
             int end = line.indexOf(CPACK_PKG_SUFFIX)
             if (start >= 0 && end > start) {
-                def pkg = line.substring(start + CPACK_PKG_PREFIX.length(), end).trim()
-                pkg = pkg.replace('/', '\\')
-                steps.bat(label: "Collect ${pkg}",
-                    script: "copy \"${pkg}\" \"${packagesDir}\\\"")
+                return line.substring(start + CPACK_PKG_PREFIX.length(), end).trim().replace('/', '\\')
             }
         }
+        return null
     }
 
     def install(Map config) {
