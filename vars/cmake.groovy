@@ -121,8 +121,11 @@ def workflow(Map overrides = [:]) {
         name: 'CMake Workflow',
         params: workflowParams,
         execute: { params, ctx ->
-            impl.workflowWithPreset(preset: params.CMAKE_WORKFLOW_PRESET)
+            def packagePath = impl.workflowWithPreset(preset: params.CMAKE_WORKFLOW_PRESET)
             ctx.buildEngine = 'CMake'
+            if (packagePath) {
+                ctx.outputDir = packagePath
+            }
         },
         hasCleanup: false
     )

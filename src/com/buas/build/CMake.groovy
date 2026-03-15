@@ -204,10 +204,11 @@ class CMake implements Serializable {
         return presetList.findAll { !(it.hidden ?: false) }.collect { it.name }
     }
 
-    private void batWithVsEnv(Map args) {
+    private def batWithVsEnv(Map args) {
         def arch = args.arch ?: 'x64'
+        def returnStdout = args.returnStdout ?: false
         def script = "${vsEnvPrefix(arch)}\n${args.script}"
-        steps.bat(label: args.label, script: script)
+        return steps.bat(label: args.label, script: script, returnStdout: returnStdout)
     }
 
     private static List<String> reorderChoices(List<String> choices, String previous) {
@@ -475,11 +476,14 @@ class CMake implements Serializable {
         return parsePackagePath(output)
     }
 
-    def workflowWithPreset(Map config) {
+    String workflowWithPreset(Map config) {
         def preset = config.preset
 
-        batWithVsEnv(label: "CMake workflow (preset: ${preset})",
-            script: "cmake --workflow --preset \"${preset}\"")
+        def output = batWithVsEnv(label: "CMake workflow (preset: ${preset})",
+            script: "@cmake --workflow --preset \"${preset}\"",
+            returnStdout: true).trim()
+
+        return parsePackagePath(output)
     }
 
     // -- Manual methods --
