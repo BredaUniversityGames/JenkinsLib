@@ -34,7 +34,9 @@ class UE5 implements Serializable {
                    choices: reorderChoices(overrides.UE5_BUILD_PLATFORM_CHOICES ?: ['Win64', 'Linux', 'PS5'], prev.UE5_BUILD_PLATFORM),
                    description: 'Target platform'),
             steps.booleanParam(name: 'UE5_MATCH_BUILD_ID', defaultValue: overrides.UE5_MATCH_BUILD_ID ?: prev.UE5_MATCH_BUILD_ID ?: false,
-                         description: 'Patch project plugin BuildIds to match the engine (required for precompiled engines)')
+                         description: 'Patch project plugin BuildIds to match the engine (required for precompiled engines)'),
+            steps.booleanParam(name: 'UE5_CLEAN_BUILD', defaultValue: overrides.UE5_CLEAN_BUILD ?: prev.UE5_CLEAN_BUILD ?: false,
+                         description: 'Force a clean build (removes intermediate files before building)')
         ]
     }
 
@@ -120,7 +122,8 @@ class UE5 implements Serializable {
                 platform:    params.UE5_BUILD_PLATFORM,
                 outputDir:   ctx.outputDir,
                 method:      params.UE5_BUILD_METHOD,
-                customFlags: params.UE5_CUSTOM_FLAGS
+                customFlags: params.UE5_CUSTOM_FLAGS,
+                clean:       params.UE5_CLEAN_BUILD
             )
         }
 
@@ -139,6 +142,7 @@ class UE5 implements Serializable {
         def outputDir = config.outputDir
         def method = config.method ?: 'Blueprint'
         def customFlags = config.customFlags ?: '-Cook -Allmaps -Build -Stage -Pak -Rocket -Prereqs -Package -crashreporter'
+        def cleanFlag = config.clean ? '-Clean' : ''
 
         switch (method) {
             case 'Blueprint':
@@ -148,7 +152,7 @@ class UE5 implements Serializable {
                             "-TargetPlatform=${platform} -Platform=${platform} " +
                             "-ClientConfig=${buildConfig} -ServerConfig=${buildConfig} " +
                             "-Cook -Allmaps -Build -Stage -Pak -Archive " +
-                            "-Archivedirectory=\"${outputDir}\" -Rocket -Prereqs -Package")
+                            "-Archivedirectory=\"${outputDir}\" -Rocket -Prereqs -Package ${cleanFlag}")
                 break
 
             case 'Precompiled':
@@ -160,7 +164,7 @@ class UE5 implements Serializable {
                             "-ClientConfig=${buildConfig} " +
                             "-Cook -Build -Stage -Pak -Archive " +
                             "-Archivedirectory=\"${outputDir}\" -Rocket -Prereqs " +
-                            "-iostore -compressed -Package -nocompile -nocompileuat")
+                            "-iostore -compressed -Package -nocompile -nocompileuat ${cleanFlag}")
                 break
 
             case 'Custom':
@@ -169,7 +173,7 @@ class UE5 implements Serializable {
                             "-Project=\"${project}\" -NoP4 -Distribution " +
                             "-TargetPlatform=${platform} -Platform=${platform} " +
                             "-ClientConfig=${buildConfig} -ServerConfig=${buildConfig} " +
-                            "-Archive -Archivedirectory=\"${outputDir}\" ${customFlags}")
+                            "-Archive -Archivedirectory=\"${outputDir}\" ${customFlags} ${cleanFlag}")
                 break
 
             default:
