@@ -181,20 +181,34 @@ class UE5 implements Serializable {
         }
     }
 
-    @NonCPS
     private void matchBuildId(String engineRoot, String projectDir) {
-        def sourceFile = new File(engineRoot, 'Engine/Plugins/Animation/LiveLink/Binaries/Win64/UnrealEditor.modules')
-        def sourceBuildId = new groovy.json.JsonSlurper().parseText(sourceFile.text).BuildId
+        def escEngineRoot = engineRoot.replace("'", "''")
+        def escProjectDir = projectDir.replace("'", "''")
 
-        def projectPath = new File(projectDir)
-        projectPath.eachFileRecurse { file ->
-            if (file.path.replace('\\', '/').matches('.*/Plugins/.*/Binaries/Win64/UnrealEditor\\.modules')) {
-                file.writable = true
-                def data = new groovy.json.JsonSlurper().parseText(file.text)
-                data.BuildId = sourceBuildId
-                file.text = groovy.json.JsonOutput.toJson(data)
-            }
-        }
+        steps.powershell(label: 'Patch plugin BuildIds to match engine', script:
+            "\$engineRoot = '${escEngineRoot}'\n" +
+            "\$projectDir = '${escProjectDir}'\n" +
+            '''
+$ErrorActionPreference = 'Stop'
+$sourceFile = Join-Path $engineRoot 'Engine\\Plugins\\Animation\\LiveLink\\Binaries\\Win64\\UnrealEditor.modules'
+$sourceBuildId = (Get-Content $sourceFile -Raw | ConvertFrom-Json).BuildId
+Write-Output "Engine BuildId: $sourceBuildId"
+
+$count = 0
+Get-ChildItem -Path $projectDir -Recurse -Filter 'UnrealEditor.modules' |
+    Where-Object { $_.FullName -replace '\\\\','/' -match '.*/Plugins/.*/Binaries/Win64/UnrealEditor\\.modules' } |
+    ForEach-Object {
+        $file = $_.FullName
+        Set-ItemProperty -Path $file -Name IsReadOnly -Value $false
+        $data = Get-Content $file -Raw | ConvertFrom-Json
+        $data.BuildId = $sourceBuildId
+        $data | ConvertTo-Json -Compress | Set-Content $file -NoNewline
+        Write-Output "Patched: $file"
+        $count++
+    }
+
+Write-Output "Patched $count .modules file(s)"
+''')
     }
 
     def runTests(Map config) {
