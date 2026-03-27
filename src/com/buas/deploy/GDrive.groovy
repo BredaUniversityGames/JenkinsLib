@@ -11,6 +11,8 @@ import java.security.spec.PKCS8EncodedKeySpec
  * Google Drive deployment.
  * Uploads build artifacts to Google Drive using the Drive v3 resumable upload API.
  * Uses Java standard library for JWT signing and HTTP — no external dependencies.
+ *
+ * All file I/O runs on the Jenkins agent (via Pipeline steps), not the controller.
  */
 class GDrive implements Serializable {
     def steps
@@ -62,17 +64,17 @@ class GDrive implements Serializable {
         def zipPath = "${steps.env.WORKSPACE}\\${archiveName}.zip"
 
         steps.withCredentials([steps.file(credentialsId: credentialsId, variable: 'GDRIVE_SECRET')]) {
-            def authFilePath = steps.env.GDRIVE_SECRET
-            def token = getAccessToken(authFilePath)
+            def authContent = steps.readFile(file: steps.env.GDRIVE_SECRET)
+            def token = getAccessToken(authContent)
             def uploadUrl = initResumableUpload(token, "${archiveName}.zip", folderId)
             uploadChunked(uploadUrl, zipPath, token)
         }
 
-        new File(zipPath).delete()
+        steps.bat(script: "del /f \"${zipPath}\"")
     }
 
-    private String createJwt(String authFilePath) {
-        def authJson = new JsonSlurper().parseText(new File(authFilePath).text)
+    private String createJwt(String authContent) {
+        def authJson = new JsonSlurper().parseText(authContent)
         def iss = authJson.client_email
         def privateKeyPem = authJson.private_key
 
@@ -105,8 +107,8 @@ class GDrive implements Serializable {
         return "${signingInput}.${signature}"
     }
 
-    private String getAccessToken(String authFilePath) {
-        def jwt = createJwt(authFilePath)
+    private String getAccessToken(String authContent) {
+        def jwt = createJwt(authContent)
         def body = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}"
 
         def url = new URL('https://oauth2.googleapis.com/token')
@@ -154,54 +156,92 @@ class GDrive implements Serializable {
         return uploadUrl
     }
 
+    /**
+     * Chunked resumable upload executed on the agent via PowerShell.
+     * Reads the file and sends HTTP requests entirely on the agent,
+     * avoiding transfer of large binary data through the controller.
+     */
     private void uploadChunked(String uploadUrl, String filePath, String token) {
-        def file = new RandomAccessFile(filePath, 'r')
-        def fileSize = file.length()
-        long offset = 0
+        def escFilePath = filePath.replace("'", "''")
+        def escUploadUrl = uploadUrl.replace("'", "''")
+        def escToken = token.replace("'", "''")
 
-        steps.echo("Uploading ${filePath} (${String.format('%.1f', fileSize / (1024.0 * 1024.0))} MB)")
+        def psScript = "\$ErrorActionPreference = 'Stop'\n" +
+            "\$filePath = '${escFilePath}'\n" +
+            "\$uploadUrl = '${escUploadUrl}'\n" +
+            "\$token = '${escToken}'\n" +
+            "\$chunkSize = ${CHUNK_SIZE}\n" +
+            '''
+$fs = [System.IO.File]::OpenRead($filePath)
+$fileSize = $fs.Length
+Write-Output "Uploading $filePath ($([Math]::Round($fileSize / 1MB, 1)) MB)"
 
+try {
+    [long]$offset = 0
+    $buffer = New-Object byte[] $chunkSize
+
+    while ($offset -lt $fileSize) {
+        $currentChunkSize = [Math]::Min($chunkSize, $fileSize - $offset)
+        $fs.Position = $offset
+        [void]$fs.Read($buffer, 0, $currentChunkSize)
+
+        $endByte = $offset + $currentChunkSize - 1
+
+        $request = [System.Net.HttpWebRequest]::Create($uploadUrl)
+        $request.Method = 'PUT'
+        $request.AllowAutoRedirect = $false
+        $request.Headers.Add('Authorization', "Bearer $token")
+        $request.ContentLength = $currentChunkSize
+        $request.Headers.Add('Content-Range', "bytes $offset-$endByte/$fileSize")
+        $request.Timeout = 300000
+
+        $reqStream = $request.GetRequestStream()
+        $reqStream.Write($buffer, 0, $currentChunkSize)
+        $reqStream.Close()
+
+        $progress = [Math]::Round(($endByte + 1) / $fileSize * 1000) / 10
+
+        $statusCode = 0
+        $response = $null
         try {
-            while (offset < fileSize) {
-                int chunkSize = (int) Math.min(CHUNK_SIZE, fileSize - offset)
-                long endByte = offset + chunkSize - 1
-
-                file.seek(offset)
-                def buffer = new byte[chunkSize]
-                file.readFully(buffer)
-
-                def url = new URL(uploadUrl)
-                def conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = 'PUT'
-                conn.setRequestProperty('Authorization', "Bearer ${token}")
-                conn.setRequestProperty('Content-Length', String.valueOf(chunkSize))
-                conn.setRequestProperty('Content-Range', "bytes ${offset}-${endByte}/${fileSize}")
-                conn.doOutput = true
-                conn.outputStream.write(buffer)
-                conn.outputStream.close()
-
-                def code = conn.responseCode
-                def progress = Math.round((endByte + 1) / fileSize * 1000) / 10.0
-                steps.echo("Progress: ${progress}%")
-
-                if (code == 200 || code == 201) {
-                    steps.echo("Upload complete.")
-                    return
-                } else if (code == 308) {
-                    def range = conn.getHeaderField('Range')
-                    if (range) {
-                        offset = Long.parseLong(range.split('-')[1]) + 1
-                    } else {
-                        offset += chunkSize
-                    }
-                } else {
-                    def error = conn.errorStream?.text ?: 'unknown error'
-                    steps.error("Upload failed at ${progress}% (HTTP ${code}): ${error}")
-                }
+            $response = $request.GetResponse()
+            $statusCode = [int]$response.StatusCode
+        } catch [System.Net.WebException] {
+            $response = $_.Exception.Response
+            if ($response) {
+                $statusCode = [int]$response.StatusCode
+            } else {
+                throw "Upload failed at ${progress}%: $($_.Exception.Message)"
             }
-        } finally {
-            file.close()
         }
+
+        Write-Output "Progress: ${progress}%"
+
+        if ($statusCode -eq 200 -or $statusCode -eq 201) {
+            $response.Close()
+            Write-Output 'Upload complete.'
+            return
+        } elseif ($statusCode -eq 308) {
+            $range = $response.Headers['Range']
+            $response.Close()
+            if ($range) {
+                $offset = [long]$range.Split('-')[1] + 1
+            } else {
+                $offset += $currentChunkSize
+            }
+        } else {
+            $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+            $errorBody = $reader.ReadToEnd()
+            $reader.Close()
+            $response.Close()
+            throw "Upload failed at ${progress}% (HTTP ${statusCode}): $errorBody"
+        }
+    }
+} finally {
+    $fs.Close()
+}
+'''
+        steps.powershell(script: psScript)
     }
 
     private static String base64url(String text) {
