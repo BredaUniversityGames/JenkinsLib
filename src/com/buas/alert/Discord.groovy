@@ -166,7 +166,7 @@ class Discord implements Serializable {
     }
 
     private def sendRaw(Map body, String webhook) {
-        def json = JsonOutput.toJson(body).replace('"', '""')
+        def json = JsonOutput.toJson(body).replace('%', '%%').replace('"', '""')
         steps.bat(label: "Send Discord notification", script: "curl -X POST -H \"Content-Type: application/json\" -d \"${json}\" ${webhook}")
     }
 
