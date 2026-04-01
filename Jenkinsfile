@@ -13,6 +13,9 @@ stages {
     perforce.sync()
     // git.sync()
 
+    // ── Versioning (optional, requires git) ──
+    // github.version()
+
     // ── Matrix (optional) ──
     // Wrap stages in a matrix() block to repeat them for every axis combination.
     // Stages outside the matrix run once; stages inside repeat per combination.
@@ -47,6 +50,9 @@ stages {
         // ── Debug Symbols ──
         // sentry.upload()
     }
+
+    // ── Release ──
+    // github.release()
 
     // ── Notifications ──
     discord.alert()
