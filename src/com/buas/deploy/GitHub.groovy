@@ -8,7 +8,8 @@ package com.buas.deploy
  *
  * Requires:
  *   - gh CLI installed on the Jenkins agent
- *   - A Jenkins Secret Text credential containing a GitHub token
+ *   - A Jenkins Username/Password credential where the password is a GitHub token
+ *     (the same credential type used by git.sync(), so they can be shared)
  */
 class GitHub implements Serializable {
     def steps
@@ -22,8 +23,8 @@ class GitHub implements Serializable {
         return [
             steps.credentials(name: 'GH_CREDENTIALS_ID',
                 defaultValue: overrides.GH_CREDENTIALS_ID ?: prev.GH_CREDENTIALS_ID ?: '',
-                credentialType: 'org.jenkinsci.plugins.plaincredentials.StringCredentials',
-                description: 'Jenkins credential for GitHub token (Secret text)'),
+                credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials',
+                description: 'Jenkins credential for GitHub (Username with password — same as GIT_CREDENTIALS_ID)'),
             steps.choice(name: 'GH_VERSION_BUMP',
                 choices: reorderChoices(['patch', 'minor', 'major'], prev.GH_VERSION_BUMP),
                 description: 'Which semver component to increment')
@@ -114,7 +115,7 @@ class GitHub implements Serializable {
         def draft         = config.draft ?: false
         def prerelease    = config.prerelease ?: false
 
-        steps.withCredentials([steps.string(credentialsId: credentialsId, variable: 'GH_TOKEN')]) {
+        steps.withCredentials([steps.usernamePassword(credentialsId: credentialsId, passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
             def cmd = "gh release create \"${version}\" --title \"${name}\""
 
             if (body) {
