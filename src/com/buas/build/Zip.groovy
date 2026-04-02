@@ -5,7 +5,7 @@ package com.buas.build
  * Creates a ZIP archive from a source directory without requiring CPack
  * or install() rules in CMakeLists.txt.
  *
- * Uses 7-Zip when available, falls back to PowerShell Compress-Archive.
+ * Uses PowerShell Compress-Archive (available on all Windows agents).
  *
  * The generated archive is placed in the workspace root so that deploy
  * modules (e.g. github.release with GH_RELEASE_ASSETS = '*.zip') can
@@ -26,10 +26,7 @@ class Zip implements Serializable {
                 description: 'Directory to zip (supports ${PARAM} placeholders, e.g. build/${CMAKE_BUILD_PRESET}/bin/game)'),
             steps.string(name: 'ZIP_ARCHIVE_NAME',
                 defaultValue: overrides.ZIP_ARCHIVE_NAME ?: prev.ZIP_ARCHIVE_NAME ?: '',
-                description: 'Output archive name without extension (supports ${PARAM} placeholders, default: source directory name)'),
-            steps.choice(name: 'ZIP_METHOD',
-                choices: reorderChoices(['7z', 'powershell'], prev.ZIP_METHOD),
-                description: 'Compression tool to use')
+                description: 'Output archive name without extension (supports ${PARAM} placeholders, default: source directory name)')
         ]
     }
 
@@ -45,8 +42,6 @@ class Zip implements Serializable {
             archiveName = sourceDir.replaceAll(/[\\/]$/, '').split(/[\\/]/).last()
         }
 
-        def use7z = (params.ZIP_METHOD ?: '7z') == '7z'
-
         // Verify the source directory exists
         def exists = steps.bat(
             label: "Check ${sourceDir} exists",
@@ -59,13 +54,8 @@ class Zip implements Serializable {
 
         // Create the archive in the workspace root
         def archivePath = "${archiveName}.zip"
-        if (use7z) {
-            steps.bat(label: "Zip ${sourceDir} -> ${archivePath}",
-                script: "7z a \"${archivePath}\" \".\\${sourceDir}\\*\"")
-        } else {
-            steps.powershell(label: "Zip ${sourceDir} -> ${archivePath}",
-                script: "Compress-Archive -Path \"${sourceDir}\\*\" -DestinationPath \"${archivePath}\" -Force")
-        }
+        steps.powershell(label: "Zip ${sourceDir} -> ${archivePath}",
+            script: "Compress-Archive -Path \"${sourceDir}\\*\" -DestinationPath \"${archivePath}\" -Force")
 
         ctx.outputDir = "${steps.env.WORKSPACE}\\${archivePath}"
     }
@@ -79,8 +69,4 @@ class Zip implements Serializable {
         }
     }
 
-    private static List<String> reorderChoices(List<String> choices, String previous) {
-        if (!previous || !choices.contains(previous)) return choices
-        return [previous] + choices.findAll { it != previous }
-    }
 }
