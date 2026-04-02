@@ -56,26 +56,31 @@ class GitHub implements Serializable {
     def computeVersion(Map params, Map ctx) {
         def bump = params.GH_VERSION_BUMP ?: 'patch'
 
-        // git.sync() uses a shallow clone (depth 1) which has no tag history.
-        // Fetch all tags so git describe and git log ranges work correctly.
+        // git.sync() uses a shallow clone (depth 1). Fetch all tags as refs.
         steps.bat(label: 'Fetch tags', script: '@git fetch --tags --force 2>nul')
 
-        def latestTag = steps.bat(
+        // Use git tag --sort instead of git describe: describe walks commit
+        // ancestry which fails with shallow clones, while tag --sort just
+        // reads refs and works regardless of clone depth.
+        def tagOutput = steps.bat(
             label: 'Get latest git tag',
-            script: '@git describe --tags --abbrev=0 2>nul || echo none',
+            script: '@git tag -l "v*" --sort=-v:refname',
             returnStdout: true
-        ).trim().split('\n').last().trim()
+        ).trim()
+
+        def latestTag = tagOutput ? tagOutput.split('\n').first().trim() : ''
 
         def newVersion
-        if (!latestTag || latestTag == 'none') {
+        if (!latestTag) {
             steps.echo 'No existing tags found, starting at v0.1.0'
             newVersion = 'v0.1.0'
         } else {
             newVersion = bumpVersion(latestTag, bump)
         }
 
-        steps.echo "Version: ${latestTag} -> ${newVersion}"
+        steps.echo "Version: ${latestTag ?: '(none)'} -> ${newVersion}"
         ctx.version = newVersion
+        ctx.latestTag = latestTag
         steps.env.BUILD_VERSION = newVersion
     }
 
@@ -93,7 +98,7 @@ class GitHub implements Serializable {
             steps.error('GH_CREDENTIALS_ID is required for github.release()')
         }
 
-        def changelog = generateChangelog()
+        def changelog = generateChangelog(ctx.latestTag)
         def releaseName = (params.GH_RELEASE_NAME ?: 'Release ${VERSION}').replace('${VERSION}', version)
         def assetsPattern = params.GH_RELEASE_ASSETS ?: '*.zip'
         def draft = params.GH_RELEASE_DRAFT ?: false
@@ -154,22 +159,22 @@ class GitHub implements Serializable {
     /**
      * Generate a changelog from conventional commits since the last tag.
      * Assumes computeVersion() has already run (tags are fetched).
+     *
+     * Because git.sync() uses a shallow clone, git log <tag>..HEAD won't work
+     * (the tagged commit isn't in the shallow history). Instead we deepen
+     * the clone enough to cover the range, with a cap to avoid fetching the
+     * entire history.
      */
-    String generateChangelog() {
-        def latestTag = steps.bat(
-            label: 'Get latest tag for changelog',
-            script: '@git describe --tags --abbrev=0 2>nul || echo none',
-            returnStdout: true
-        ).trim().split('\n').last().trim()
-
-        def logRange = (!latestTag || latestTag == 'none') ? 'HEAD' : "${latestTag}..HEAD"
-
-        // Unshallow enough history for the log range to work against a shallow clone
-        if (latestTag && latestTag != 'none') {
+    String generateChangelog(String latestTag) {
+        if (latestTag) {
+            // Fetch history back to the tag so git log can resolve the range.
+            // --shallow-exclude fetches everything newer than the tag.
+            // Fall back to --deepen if the tag isn't an ancestor of HEAD.
             steps.bat(label: 'Fetch history for changelog',
-                script: "@git fetch --shallow-exclude=\"${latestTag}\" 2>nul & @git fetch --deepen=1 2>nul & exit /b 0")
+                script: "@git fetch --shallow-exclude=\"${latestTag}\" 2>nul || @git fetch --deepen=50 2>nul")
         }
 
+        def logRange = latestTag ? "${latestTag}..HEAD" : 'HEAD'
         def rawLog = steps.bat(
             label: 'Generate changelog',
             script: "@git log --pretty=format:\"- %%s\" ${logRange}",
