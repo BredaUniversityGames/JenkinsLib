@@ -56,6 +56,10 @@ class GitHub implements Serializable {
     def computeVersion(Map params, Map ctx) {
         def bump = params.GH_VERSION_BUMP ?: 'patch'
 
+        // git.sync() uses a shallow clone (depth 1) which has no tag history.
+        // Fetch all tags so git describe and git log ranges work correctly.
+        steps.bat(label: 'Fetch tags', script: '@git fetch --tags --force 2>nul')
+
         def latestTag = steps.bat(
             label: 'Get latest git tag',
             script: '@git describe --tags --abbrev=0 2>nul || echo none',
@@ -115,8 +119,19 @@ class GitHub implements Serializable {
         def draft         = config.draft ?: false
         def prerelease    = config.prerelease ?: false
 
+        // Detect the GitHub repo from the git remote so gh doesn't have to guess
+        def repoSlug = steps.bat(
+            label: 'Detect GitHub repo',
+            script: '@git remote get-url origin',
+            returnStdout: true
+        ).trim().split('\n').last().trim()
+            .replaceAll(/.*github\.com[:\\/]/, '')
+            .replaceAll(/\.git$/, '')
+
         steps.withCredentials([steps.usernamePassword(credentialsId: credentialsId, passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
-            def cmd = "gh release create \"${version}\" --title \"${name}\""
+            // Write the release title to a file to avoid shell escaping issues
+            steps.writeFile(file: 'release_title.txt', text: name)
+            def cmd = "for /f \"usebackq delims=\" %%T in (\"release_title.txt\") do gh release create \"${version}\" --repo \"${repoSlug}\" --title \"%%T\""
 
             if (body) {
                 steps.writeFile(file: 'release_notes.md', text: body)
@@ -138,6 +153,7 @@ class GitHub implements Serializable {
 
     /**
      * Generate a changelog from conventional commits since the last tag.
+     * Assumes computeVersion() has already run (tags are fetched).
      */
     String generateChangelog() {
         def latestTag = steps.bat(
@@ -146,16 +162,17 @@ class GitHub implements Serializable {
             returnStdout: true
         ).trim().split('\n').last().trim()
 
-        def logCmd
-        if (!latestTag || latestTag == 'none') {
-            logCmd = '@git log --pretty=format:"- %%s" HEAD'
-        } else {
-            logCmd = "@git log --pretty=format:\"- %%s\" ${latestTag}..HEAD"
+        def logRange = (!latestTag || latestTag == 'none') ? 'HEAD' : "${latestTag}..HEAD"
+
+        // Unshallow enough history for the log range to work against a shallow clone
+        if (latestTag && latestTag != 'none') {
+            steps.bat(label: 'Fetch history for changelog',
+                script: "@git fetch --shallow-exclude=\"${latestTag}\" 2>nul & @git fetch --deepen=1 2>nul & exit /b 0")
         }
 
         def rawLog = steps.bat(
             label: 'Generate changelog',
-            script: logCmd,
+            script: "@git log --pretty=format:\"- %%s\" ${logRange}",
             returnStdout: true
         ).trim()
 
