@@ -64,8 +64,8 @@ class Zip implements Serializable {
      * Replace ${PARAM_NAME} placeholders with values from the pipeline params.
      */
     private static String resolveTemplate(String template, Map params) {
-        return template.replaceAll(/\$\{(\w+)\}/) { match, key ->
-            params[key] ?: match
+        return template.replaceAll(/\$\{(\w+)\}/) { groups ->
+            params[groups[1]] ?: groups[0]
         }
     }
 
