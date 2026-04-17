@@ -7,9 +7,7 @@ Credit to [DavidtKate/JenkinsSharedLib](https://github.com/DavidtKate/JenkinsSha
 ## Quick Start
 
 ```groovy
-library identifier: 'JenkinsLib@main',
-    retriever: modernSCM([$class: 'GitSCMSource',
-        remote: 'https://github.com/BredaUniversityGames/JenkinsLib'])
+@Library('JenkinsLib') _
 
 stages {
     perforce.sync()
