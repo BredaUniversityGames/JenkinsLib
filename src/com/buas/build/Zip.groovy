@@ -5,7 +5,7 @@ package com.buas.build
  * Creates a ZIP archive from a source directory without requiring CPack
  * or install() rules in CMakeLists.txt.
  *
- * Uses PowerShell Compress-Archive (available on all Windows agents).
+ * Uses PowerShell and System.IO.Compression.ZipFile (available on all Windows agents).
  *
  * The generated archive is placed in the workspace root so that deploy
  * modules (e.g. github.release with GH_RELEASE_ASSETS = '*.zip') can
@@ -54,8 +54,16 @@ class Zip implements Serializable {
 
         // Create the archive in the workspace root
         def archivePath = "${archiveName}.zip"
-        steps.powershell(label: "Zip ${sourceDir} -> ${archivePath}",
-            script: "Compress-Archive -Path \"${sourceDir}\\*\" -DestinationPath \"${archivePath}\" -Force")
+        steps.powershell(
+            label: "Zip ${sourceDir} -> ${archivePath}",
+            script: """
+                Add-Type -Assembly 'System.IO.Compression.FileSystem'
+                \$src  = (Resolve-Path \"${sourceDir}\").Path
+                \$dest = [System.IO.Path]::GetFullPath(\"${archivePath}\")
+                if (Test-Path \$dest) { Remove-Item \$dest -Force }
+                [System.IO.Compression.ZipFile]::CreateFromDirectory(\$src, \$dest)
+            """
+        )
 
         ctx.outputDir = "${steps.env.WORKSPACE}\\${archivePath}"
     }
