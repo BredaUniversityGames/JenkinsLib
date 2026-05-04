@@ -1,5 +1,6 @@
 package com.buas.deploy
 
+import com.buas.build.Zip
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
@@ -59,7 +60,10 @@ class GDrive implements Serializable {
         def archiveName = "${steps.env.JOB_BASE_NAME}_${platform}_${buildConfig}_${buildNum}"
         def sourceDir = "${source}\\${platformDir}"
 
-        steps.utilZip.pack(sourceDir, archiveName, false)
+        new Zip(steps).execute(
+            [ZIP_SOURCE_DIR: sourceDir, ZIP_ARCHIVE_NAME: archiveName],
+            [:]
+        )
 
         def zipPath = "${steps.env.WORKSPACE}\\${archiveName}.zip"
 
