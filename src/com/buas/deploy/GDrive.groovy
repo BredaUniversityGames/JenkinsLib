@@ -174,7 +174,7 @@ class GDrive implements Serializable {
             "\$filePath = '${escFilePath}'\n" +
             "\$uploadUrl = '${escUploadUrl}'\n" +
             "\$token = '${escToken}'\n" +
-            "\$chunkSize = ${CHUNK_SIZE}\n" +
+            "\$chunkSize = [int]${CHUNK_SIZE}\n" +
             '''
 $fs = [System.IO.File]::OpenRead($filePath)
 $fileSize = $fs.Length
@@ -185,7 +185,8 @@ try {
     $buffer = New-Object byte[] $chunkSize
 
     while ($offset -lt $fileSize) {
-        $currentChunkSize = [Math]::Min($chunkSize, $fileSize - $offset)
+        $remainingBytes = [long]($fileSize - $offset)
+        $currentChunkSize = [int][Math]::Min([long]$chunkSize, $remainingBytes)
         $fs.Position = $offset
         [void]$fs.Read($buffer, 0, $currentChunkSize)
 
