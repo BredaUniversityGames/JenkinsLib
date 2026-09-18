@@ -167,6 +167,18 @@ class UE5 implements Serializable {
                             "-iostore -compressed -Package -nocompile -nocompileuat ${cleanFlag}")
                 break
 
+            case 'CPP':
+                steps.bat(label: "Package and Build UE5 CPP project",
+                    script: "\"${engineRoot}\\Engine\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
+                            "-Project=\"${project}\" -NoP4 " +
+                            "-nocompileeditor -skipbuildeditor " +
+                            "-TargetPlatform=${platform} -Platform=${platform} " +
+                            "-ClientConfig=${buildConfig} " +
+                            "-Cook -Build -Stage -Pak -Archive " +
+                            "-Archivedirectory=\"${outputDir}\" -Rocket -Prereqs " +
+                            "-iostore -compressed -Package -compile -compileuat ${cleanFlag}")
+                break
+
             case 'Custom':
                 steps.bat(label: "Package UE5 Custom project",
                     script: "\"${engineRoot}\\Engine\\Build\\BatchFiles\\RunUAT.bat\" BuildCookRun " +
