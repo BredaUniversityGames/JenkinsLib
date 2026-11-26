@@ -1,5 +1,5 @@
 // Sandbox test: Git + Visual Studio. See test/jenkins/README.md.
-@Library('JenkinsLibSandbox@dev') _
+@Library('JenkinsLibSandbox') _   // version comes from the folder's library setting
 
 stages {
     git.sync()

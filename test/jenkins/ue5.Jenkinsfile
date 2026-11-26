@@ -1,5 +1,5 @@
 // Sandbox test: Perforce + UE5. See test/jenkins/README.md.
-@Library('JenkinsLibSandbox@dev') _
+@Library('JenkinsLibSandbox') _   // version comes from the folder's library setting
 
 stages {
     perforce.sync()

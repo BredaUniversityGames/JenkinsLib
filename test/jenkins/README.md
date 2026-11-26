@@ -5,6 +5,9 @@ Groovy sandbox would block shows up. They're for the refactor in
 [#2](https://github.com/BredaUniversityGames/JenkinsLib/issues/2) and
 [#4](https://github.com/BredaUniversityGames/JenkinsLib/issues/4); students never use them.
 
+To try them without a server or a commit, use the local test Jenkins in
+[`local/`](local/README.md). The steps below are for a real server.
+
 ## One-time setup
 
 1. Create a folder, e.g. `JenkinsLib-Sandbox`, and open **Configure**.
@@ -17,8 +20,9 @@ Groovy sandbox would block shows up. They're for the refactor in
    Libraries configured on a folder always run in the sandbox, even for admins.
 3. Create one Pipeline job per Jenkinsfile in this folder, using **Pipeline script from SCM**
    with the JenkinsLib repo and the script path, e.g. `test/jenkins/cmake.Jenkinsfile`.
-   Point the job at the branch you're testing (e.g. `dev` or a `refactor/...` branch) and
-   set the same branch in the `@Library` line if you're not testing `dev`.
+   Point the job at the branch you're testing (e.g. `dev` or a `refactor/...` branch).
+   The Jenkinsfiles don't pin a library version, so the library comes from the folder's
+   **Default version**; change that to test another branch.
 
 ## Running a check
 

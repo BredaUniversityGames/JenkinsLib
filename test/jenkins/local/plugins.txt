@@ -1,0 +1,23 @@
+# Plugins for the local test Jenkins (dependencies are resolved automatically).
+# Versions float to the latest release compatible with the Jenkins version
+# in setup-controller.sh.
+
+# Setup from files instead of the UI
+configuration-as-code
+job-dsl
+
+# Pipeline and shared libraries
+workflow-aggregator
+pipeline-groovy-lib
+cloudbees-folder
+
+# Steps and parameter types JenkinsLib uses
+git
+credentials
+credentials-binding
+plain-credentials
+lockable-resources
+ws-cleanup
+junit
+p4
+pipeline-utility-steps

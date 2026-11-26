@@ -1,0 +1,44 @@
+# Configuration as Code for the local test Jenkins.
+# Variables come from start-controller.sh.
+
+jenkins:
+  systemMessage: >-
+    JenkinsLib local test server. The sandboxed library and the jobs load
+    from the jenkins-local snapshot of your working copy; run
+    test/jenkins/local/run-local.ps1 to refresh it and start a job.
+  # Nothing builds on the (Linux) controller; everything goes to the Windows agent.
+  numExecutors: 0
+  mode: EXCLUSIVE
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: "${ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  nodes:
+    - permanent:
+        name: windows-agent
+        labelString: Windows
+        remoteFS: 'C:\JenkinsAgent'
+        numExecutors: 2
+        mode: NORMAL
+        launcher:
+          inbound:
+            webSocket: true
+  globalNodeProperties:
+    - envVars:
+        env:
+          # Makes ue5.build() run its engine detection while declaring
+          # parameters, so the sandbox check covers it (see README).
+          - key: UE5_ENGINE_ROOT
+            value: 'C:\Epic'
+
+unclassified:
+  location:
+    url: "http://localhost:${JENKINSLIB_PORT}/"
+
+jobs:
+  - file: "${JENKINSLIB_LOCAL_DIR}/jobs.groovy"

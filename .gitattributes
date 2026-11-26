@@ -1,3 +1,5 @@
 # Gradle wrapper scripts must keep their native line endings, whatever
 # core.autocrlf is set to: gradlew fails on Linux/macOS with CRLF.
 /gradlew        text eol=lf
+# The local test Jenkins scripts run in WSL straight from this checkout.
+*.sh            text eol=lf
