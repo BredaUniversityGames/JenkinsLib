@@ -32,9 +32,10 @@ jenkins:
         nodeProperties:
           - envVars:
               env:
-                # Folder that holds the UE_5.x engine folders on this PC
+                # Folder that holds the UE_5.x engine folders on this PC.
+                # Per machine: set it in ~/jenkinslib-local/local.env (see README).
                 - key: UE5_ENGINE_ROOT
-                  value: 'C:\Games\Epic Games'
+                  value: '${UE5_ENGINE_ROOT:-C:\Program Files\Epic Games}'
 
 unclassified:
   location:

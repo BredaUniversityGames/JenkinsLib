@@ -13,6 +13,15 @@ if [ ! -f "$STATE/jenkins.war" ] || [ ! -f "$STATE/admin-password" ]; then
     exit 1
 fi
 
+# Per-machine settings that don't belong in the repo, e.g.
+#   UE5_ENGINE_ROOT='D:\Epic Games'
+if [ -f "$STATE/local.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$STATE/local.env"
+    set +a
+fi
+
 export JENKINS_HOME="$STATE/home"
 export JENKINSLIB_PORT="${JENKINSLIB_PORT:-8095}"
 export JENKINSLIB_REPO="file://$REPO"

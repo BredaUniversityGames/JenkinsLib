@@ -75,9 +75,15 @@ Jenkins stops at the first one. To see the next, approve the signature under
 server that's fine, but clear the approvals afterwards so it stays strict.
 Never approve them on the real server: the goal is a library that needs none.
 
-`casc.yaml` sets `UE5_ENGINE_ROOT` on `windows-agent` (to `C:\Games\Epic Games`;
-change it if your engines live elsewhere), the way Server-Setup.md describes
-for real agents.
+`casc.yaml` sets `UE5_ENGINE_ROOT` on `windows-agent`, the way Server-Setup.md
+describes for real agents. It's different on every PC, so it comes from
+`~/jenkinslib-local/local.env` in WSL (default: `C:\Program Files\Epic Games`):
+
+```sh
+echo "UE5_ENGINE_ROOT='D:\Epic Games'" > ~/jenkinslib-local/local.env
+```
+
+Restart the controller after changing it.
 
 ## Test-server-only settings
 
