@@ -75,8 +75,9 @@ Jenkins stops at the first one. To see the next, approve the signature under
 server that's fine, but clear the approvals afterwards so it stays strict.
 Never approve them on the real server: the goal is a library that needs none.
 
-`casc.yaml` sets `UE5_ENGINE_ROOT` globally so UE5 engine detection runs
-during the parameter refresh.
+`casc.yaml` sets `UE5_ENGINE_ROOT` on `windows-agent` (to `C:\Games\Epic Games`;
+change it if your engines live elsewhere), the way Server-Setup.md describes
+for real agents.
 
 ## Test-server-only settings
 

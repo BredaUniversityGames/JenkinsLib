@@ -28,13 +28,13 @@ jenkins:
         launcher:
           inbound:
             webSocket: true
-  globalNodeProperties:
-    - envVars:
-        env:
-          # Makes ue5.build() run its engine detection while declaring
-          # parameters, so the sandbox check covers it (see README).
-          - key: UE5_ENGINE_ROOT
-            value: 'C:\Epic'
+        # Set on the agent, as Server-Setup.md describes for real agents.
+        nodeProperties:
+          - envVars:
+              env:
+                # Folder that holds the UE_5.x engine folders on this PC
+                - key: UE5_ENGINE_ROOT
+                  value: 'C:\Games\Epic Games'
 
 unclassified:
   location:
