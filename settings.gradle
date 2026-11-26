@@ -1,0 +1,6 @@
+plugins {
+    // Lets Gradle download the JDK requested in build.gradle (java.toolchain).
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'JenkinsLib'

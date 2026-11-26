@@ -62,3 +62,17 @@ See the **[Wiki](../../wiki)** for full documentation:
 | Debug Symbols | [sentry.upload()](../../wiki/Sentry) |
 | Notifications | [discord.alert()](../../wiki/Discord) |
 | Matrix | [matrix()](../../wiki/Matrix), [only()](../../wiki/Matrix#only-conditional-filter) |
+
+## Development
+
+Unit tests use [JenkinsPipelineUnit](https://github.com/jenkinsci/JenkinsPipelineUnit) and run on Java 21 (Gradle downloads it if needed):
+
+```sh
+./gradlew test        # Windows: gradlew.bat test
+```
+
+Jenkins ignores the Gradle files; it only loads `src/`, `vars/` and `resources/`.
+
+- `test/groovy/` — unit tests. Tests marked `@Ignore('Phase 3 (#5): ...')` describe known bugs.
+- `test/resources/jenkinsfiles/` — Jenkinsfiles the pipeline tests run against the library.
+- `test/jenkins/` — Jenkinsfiles for testing the library untrusted (in the Groovy sandbox) on a real Jenkins. See its [README](test/jenkins/README.md).

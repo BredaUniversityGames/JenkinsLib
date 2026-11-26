@@ -1,0 +1,62 @@
+// Unit tests for JenkinsLib.
+//
+// Jenkins never uses this file: it loads src/, vars/ and resources/ directly.
+// It only exists so the pure logic can be tested locally with
+// JenkinsPipelineUnit:
+//
+//   ./gradlew test        (Windows: gradlew.bat test)
+
+plugins {
+    id 'groovy'
+}
+
+// Jenkins pipelines run on Groovy 2.4.21 on Java 21 (also what
+// JenkinsPipelineUnit 1.31 requires). Gradle downloads this JDK if needed.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.jenkins-ci.org/public/' }
+}
+
+def groovyVersion = '2.4.21'
+def pipelineUnitVersion = '1.31'
+def groovyCpsVersion = '4348.ve8c60d51e508'
+
+dependencies {
+    implementation "org.codehaus.groovy:groovy-all:${groovyVersion}"
+    // Provides @NonCPS, which Jenkins imports automatically.
+    implementation "com.cloudbees:groovy-cps:${groovyCpsVersion}"
+
+    testImplementation "com.lesfurets:jenkins-pipeline-unit:${pipelineUnitVersion}"
+    testImplementation 'junit:junit:4.13.2'
+}
+
+sourceSets {
+    main {
+        groovy { srcDirs = ['src'] }
+        resources { srcDirs = ['resources'] }
+    }
+    test {
+        groovy { srcDirs = ['test/groovy'] }
+        resources { srcDirs = ['test/resources'] }
+    }
+}
+
+// Jenkins adds `import com.cloudbees.groovy.cps.NonCPS` to every library
+// file; do the same when compiling src/ here.
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.configurationScript = file('gradle/groovy-compiler-config.groovy')
+}
+
+test {
+    useJUnit()
+    testLogging {
+        events = ['failed', 'skipped']
+        exceptionFormat = 'full'
+    }
+}

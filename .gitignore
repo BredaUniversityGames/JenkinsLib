@@ -1,1 +1,18 @@
 .claude/
+
+# Gradle (unit tests only; Jenkins doesn't use these).
+# Anchored to the repo root: an unanchored `build/` would also hide
+# src/com/buas/build/ and test/groovy/com/buas/build/.
+/.gradle/
+/build/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+/out/
+# Eclipse / VS Code Java language server
+.project
+.classpath
+.settings/
+/bin/
